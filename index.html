@@ -1,0 +1,1969 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Online Visual Timer | onlinevisualtimer.com</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='16' fill='%230b1120'/><circle cx='16' cy='16' r='10' fill='none' stroke='%231a2844' stroke-width='4'/><circle cx='16' cy='16' r='10' fill='none' stroke='%2322c55e' stroke-width='4.5' stroke-dasharray='47 16' stroke-dashoffset='16' stroke-linecap='round'/></svg>" />
+  <meta name="description" content="Free visual timer widgets for classrooms, focus sessions, ADHD, and more." />
+  <style>
+    :root {
+      --bg:      #0b1120;
+      --s1:      #141e30;
+      --s2:      #1a2844;
+      --s3:      #243354;
+      --border:  rgba(255,255,255,0.07);
+      --text:    #f0f4ff;
+      --sub:     #6a85b0;
+      --accent:  #38bdf8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── HEADER ── */
+    header {
+      flex-shrink: 0;
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11,17,32,0.95);
+      backdrop-filter: blur(16px);
+      z-index: 100;
+    }
+    .logo { font-size: 1.05rem; font-weight: 800; color: var(--accent); }
+    .logo span { color: var(--text); }
+    .tagline { font-size: 0.74rem; color: var(--sub); }
+
+    /* ── BOARD ── */
+    #board {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+      background-size: 20px 20px;
+      background-position: 10px 10px;
+    }
+    /* Ambient colour bloom that breathes with the timer */
+    #board::before {
+      content: '';
+      position: absolute; inset: 0; z-index: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse at 50% 35%,
+        var(--flow-col, rgba(34,197,94,0.06)) 0%, transparent 68%);
+      transition: background 0.8s ease;
+    }
+
+    /* ── WIDGET CARDS ── */
+    .widget-card {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.35);
+      overflow: hidden;
+      min-width: 160px;
+      min-height: 140px;
+      transition: box-shadow 0.2s;
+    }
+    /* Custom resize handle — replaces CSS resize:both so we control snap */
+    .resize-handle {
+      position: absolute;
+      bottom: 0; right: 0;
+      width: 22px; height: 22px;
+      cursor: se-resize;
+      z-index: 5;
+    }
+    .resize-handle::after {
+      content: '';
+      position: absolute;
+      right: 5px; bottom: 5px;
+      width: 10px; height: 10px;
+      border-right: 2px solid rgba(255,255,255,0.2);
+      border-bottom: 2px solid rgba(255,255,255,0.2);
+      border-radius: 1px;
+      transition: border-color 0.1s;
+    }
+    .widget-card:hover .resize-handle::after { border-color: rgba(255,255,255,0.45); }
+    .resize-handle:active::after { border-color: var(--accent); }
+    .widget-card.dragging {
+      box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+      opacity: 0.93;
+    }
+    /* Snappy position/size animation for auto-layout */
+    .widget-card.animating {
+      transition: left .15s cubic-bezier(.2,0,.2,1),
+                  top  .15s cubic-bezier(.2,0,.2,1),
+                  width  .15s cubic-bezier(.2,0,.2,1),
+                  height .15s cubic-bezier(.2,0,.2,1);
+    }
+    .widget-card:hover .widget-close { opacity: 1; }
+
+    .widget-header {
+      flex-shrink: 0;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8px 0 10px;
+      background: var(--s2);
+      cursor: grab;
+      user-select: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .widget-header:active { cursor: grabbing; }
+    .widget-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      color: var(--sub);
+      letter-spacing: 0.2px;
+    }
+    .drag-dots { color: var(--s3); letter-spacing: -1px; font-size: 1rem; }
+    .widget-close {
+      background: none;
+      border: none;
+      color: var(--sub);
+      font-size: 1rem;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      opacity: 0;
+      line-height: 1;
+      transition: background 0.15s, color 0.15s, opacity 0.15s;
+    }
+    .widget-close:hover { background: rgba(239,68,68,0.15); color: #ef4444; }
+
+    .widget-body {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    .widget-body canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%; height: 100%;
+    }
+
+    #add-btn {
+      background: var(--accent);
+      color: #061020;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 18px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 0 24px rgba(56,189,248,0.28);
+      transition: box-shadow 0.2s, transform 0.12s;
+    }
+    #add-btn:hover { box-shadow: 0 0 40px rgba(56,189,248,0.45); transform: scale(1.04); }
+    #add-btn:active { transform: scale(0.93) !important; transition-duration: .05s !important; }
+    #layout-btn {
+      background: var(--s2);
+      color: var(--sub);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.08s, color 0.08s;
+    }
+    #layout-btn:hover { background: var(--s3); color: var(--text); }
+    #layout-btn:active { transform: scale(0.93); transition-duration: .05s; }
+
+    /* ── ADD OVERLAY ── */
+    #add-overlay {
+      position: fixed; inset: 0;
+      background: rgba(6,10,20,0.78);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.1s;
+    }
+    #add-overlay.open { opacity: 1; pointer-events: all; }
+    .overlay-card {
+      background: var(--s1);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 22px 24px;
+      width: 460px;
+      max-width: 92vw;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    }
+    .overlay-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .overlay-top h3 { font-size: 0.95rem; font-weight: 700; }
+    .overlay-x {
+      background: none; border: none;
+      color: var(--sub); font-size: 1.2rem;
+      cursor: pointer; padding: 2px 8px;
+      border-radius: 8px;
+    }
+    .overlay-x:hover { background: var(--s2); color: var(--text); }
+    .widget-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+    .wt-btn {
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 6px 10px;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 5px;
+      cursor: pointer; color: var(--text);
+      transition: background 0.14s, border-color 0.14s, transform 0.1s;
+    }
+    .wt-btn:hover { background: var(--s3); border-color: var(--accent); transform: translateY(-2px); }
+    .wt-btn:active { transform: scale(0.94); }
+    .wt-icon { font-size: 1.5rem; }
+    .wt-label { font-size: 0.68rem; font-weight: 600; color: var(--sub); text-align: center; }
+
+    /* ── DONE BANNER ── */
+    #done-banner {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      background: linear-gradient(135deg,#22c55e,#16a34a);
+      color: #fff;
+      padding: 18px 44px;
+      border-radius: 999px;
+      font-size: 1.4rem; font-weight: 800;
+      z-index: 300;
+      box-shadow: 0 0 60px rgba(34,197,94,0.5);
+      cursor: pointer;
+      animation: dpop .4s ease, dpulse 1s .4s ease-in-out infinite alternate;
+    }
+    @keyframes dpop {
+      from { transform:translate(-50%,-50%) scale(.7); opacity:0; }
+      to   { transform:translate(-50%,-50%) scale(1);  opacity:1; }
+    }
+    @keyframes dpulse {
+      from { box-shadow:0 0 40px rgba(34,197,94,.4); }
+      to   { box-shadow:0 0 70px rgba(34,197,94,.65); }
+    }
+
+    /* ── CONTROLS BAR ── */
+    #controls-bar {
+      flex-shrink: 0;
+      border-top: 1px solid var(--border);
+      background: rgba(11,17,32,0.97);
+      backdrop-filter: blur(16px);
+      padding: 8px 20px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      z-index: 100;
+    }
+    .ctrl-center { display: flex; align-items: center; gap: 16px; justify-content: center; }
+    .ctrl-right  { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+    /* ── Digit-column time setter ── */
+    .digit-timer {
+      display: flex; align-items: center; gap: 2px;
+    }
+    .digit-col {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 1px;
+    }
+    .dbt {
+      background: none; border: none;
+      color: var(--sub); font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; padding: 3px 12px;
+      border-radius: 7px; line-height: 1; user-select: none;
+      transition: color 0.06s, background 0.06s, transform 0.06s;
+    }
+    .dbt:hover  { color: var(--accent); background: var(--s2); }
+    .dbt:active { transform: scale(0.8); }
+    .dbt:disabled { opacity: 0.25; cursor: default; pointer-events: none; }
+    .dgt {
+      font-size: 3rem; font-weight: 900;
+      font-variant-numeric: tabular-nums;
+      color: var(--text); line-height: 1;
+      min-width: 1.7ch; text-align: center;
+      letter-spacing: -1px;
+      transition: color 0.15s;
+    }
+    .digit-timer.disabled .dgt { color: var(--sub); }
+    .digit-sep {
+      font-size: 3rem; font-weight: 900;
+      color: var(--s3); line-height: 1;
+      padding: 0 1px; margin-top: 2px;
+      /* vertically center with the digits, offset for the buttons */
+      align-self: center;
+    }
+    .ctrl-btns { display: flex; gap: 8px; align-items: center; }
+    .btn {
+      border: none; border-radius: 999px;
+      font-weight: 700; cursor: pointer;
+      transition: transform 0.06s, box-shadow 0.12s, background 0.08s;
+    }
+    .btn:active { transform: scale(0.91) !important; }
+    .btn-start {
+      background: var(--accent); color: #061020;
+      padding: 9px 28px; font-size: 0.9rem;
+    }
+    .btn-start:hover { box-shadow: 0 0 22px rgba(56,189,248,0.35); }
+    .btn-reset {
+      background: var(--s2); color: var(--sub);
+      padding: 9px 16px; font-size: 0.88rem;
+      border: 1px solid var(--border);
+    }
+    .btn-reset:hover { color: var(--text); background: var(--s3); }
+
+    /* ── Background panel ── */
+    #bg-overlay {
+      position: fixed; top: 0; right: 0; bottom: 0;
+      width: 300px;
+      background: var(--s1);
+      border-left: 1px solid var(--border);
+      z-index: 200;
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.2s cubic-bezier(.2,0,.2,1);
+      box-shadow: -8px 0 40px rgba(0,0,0,0.4);
+    }
+    #bg-overlay.open { transform: translateX(0); }
+    .bg-panel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .bg-panel-header h3 { font-size: 0.9rem; font-weight: 700; }
+    .bg-close {
+      background: none; border: none; color: var(--sub);
+      font-size: 1.2rem; cursor: pointer; padding: 2px 7px;
+      border-radius: 7px;
+    }
+    .bg-close:hover { background: var(--s2); color: var(--text); }
+    .bg-tabs {
+      display: flex; gap: 5px; padding: 10px 12px;
+      flex-wrap: wrap; flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .bg-tab {
+      background: var(--s2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 4px 11px;
+      font-size: 0.72rem; font-weight: 600;
+      cursor: pointer; color: var(--sub);
+      transition: background 0.1s, color 0.1s;
+    }
+    .bg-tab:hover { background: var(--s3); color: var(--text); }
+    .bg-tab.active { background: var(--accent); color: #061020; border-color: var(--accent); }
+    .bg-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: 8px; padding: 12px;
+      overflow-y: auto; flex: 1;
+    }
+    .bg-thumb {
+      aspect-ratio: 16/9; border-radius: 8px;
+      overflow: hidden; cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.12s, transform 0.1s;
+      position: relative;
+    }
+    .bg-thumb:hover { transform: scale(1.04); }
+    .bg-thumb.active { border-color: var(--accent); }
+    .bg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .bg-thumb.none-tile {
+      background: var(--s2); border-color: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; color: var(--sub); font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    #bg-btn {
+      background: var(--s2); color: var(--sub);
+      border: 1px solid var(--border);
+      border-radius: 999px; padding: 10px 14px;
+      font-size: 0.88rem; font-weight: 600;
+      cursor: pointer;
+      transition: background 0.08s, color 0.08s;
+    }
+    #bg-btn:hover { background: var(--s3); color: var(--text); }
+    #bg-btn.active { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Widget transparency slider ── */
+    .opacity-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px 8px;
+      flex-shrink: 0;
+    }
+    .opacity-row label { font-size: 0.74rem; color: var(--sub); white-space: nowrap; }
+    .opacity-row input[type=range] {
+      flex: 1; accent-color: var(--accent);
+      height: 3px; cursor: pointer;
+    }
+    .opacity-val { font-size: 0.72rem; color: var(--sub); min-width: 28px; text-align: right; }
+    .invisible-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 14px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .invisible-row label {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 0.74rem; color: var(--sub);
+      cursor: pointer; user-select: none;
+    }
+    .invisible-row input { accent-color: var(--accent); cursor: pointer; }
+
+    /* ── Invisible frames mode ── */
+    body.invisible-frames .widget-card {
+      background: transparent !important;
+      border-color: transparent !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+    body.invisible-frames .widget-header {
+      background: transparent !important;
+      border-color: transparent !important;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    body.invisible-frames .widget-card:hover .widget-header {
+      opacity: 0.55;
+    }
+    body.invisible-frames .widget-card:hover {
+      border-color: rgba(255,255,255,0.18) !important;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.10) !important;
+    }
+    body.invisible-frames .widget-card:active {
+      border-color: rgba(255,255,255,0.30) !important;
+    }
+
+    /* ── Widget frosted-glass adaptation when background photo is set ── */
+    /* dot grid is CSS background-image; JS inline style overrides it automatically */
+    body.has-bg #board::before { display: none; } /* hide ambient bloom when photo set */
+    body.has-bg .widget-card {
+      background: rgba(11,17,32, var(--widget-alpha, 0.82));
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border-color: rgba(255,255,255,0.11);
+      box-shadow: 0 4px 32px rgba(0,0,0,0.45);
+    }
+    body.has-bg .widget-header {
+      background: rgba(20,34,58, var(--widget-alpha, 0.82));
+    }
+    body.has-bg #controls-bar {
+      background: rgba(8,13,22,0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    body.has-bg header {
+      background: rgba(8,13,22,0.90);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    /* ── First/Then widget ── */
+    .ft-widget {
+      display: flex; align-items: stretch;
+      height: 100%; padding: 10px; gap: 8px; position: relative;
+    }
+    .ft-widget.vertical { flex-direction: column; }
+    .ft-panel {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 6px;
+      background: var(--s2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 10px 8px; position: relative;
+      transition: background 0.2s, border-color 0.2s;
+      min-width: 0;
+    }
+    .ft-panel.done { background: rgba(34,197,94,0.12); border-color: #22c55e55; }
+    .ft-label {
+      font-size: 0.6rem; font-weight: 800; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--sub); flex-shrink: 0;
+    }
+    .ft-panel.done .ft-label { color: #22c55e; }
+    .ft-img-btn {
+      font-size: clamp(1.8rem, 5vw, 3.5rem); cursor: pointer; line-height: 1;
+      background: var(--s3); border: 1px solid var(--border);
+      border-radius: 12px; padding: 6px 10px; flex-shrink: 0;
+      transition: border-color 0.12s, transform 0.1s;
+      width: 100%; display: flex; align-items: center; justify-content: center;
+    }
+    .ft-img-btn:hover { border-color: var(--accent); transform: scale(1.04); }
+    .ft-text {
+      background: none; border: none; border-bottom: 1px solid var(--border);
+      color: var(--text); font-size: 0.9rem; font-weight: 700;
+      text-align: center; width: 100%; outline: none; padding: 3px 0;
+    }
+    .ft-text::placeholder { color: var(--sub); font-weight: 400; }
+    .ft-text:focus { border-bottom-color: var(--accent); }
+    .ft-done-btn {
+      background: #22c55e22; border: 1px solid #22c55e55;
+      color: #22c55e; border-radius: 999px;
+      padding: 4px 12px; font-size: 0.7rem; font-weight: 700;
+      cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+    }
+    .ft-done-btn:hover { background: #22c55e44; }
+    .ft-done-btn.undone { background: var(--s3); border-color: var(--border); color: var(--sub); }
+    .ft-done-check {
+      position: absolute; top: 6px; right: 8px;
+      font-size: 1rem; opacity: 0; transition: opacity 0.2s;
+    }
+    .ft-panel.done .ft-done-check { opacity: 1; }
+    .ft-arrow {
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; color: var(--sub); flex-shrink: 0;
+    }
+    .ft-widget.vertical .ft-arrow { transform: rotate(90deg); }
+    .ft-layout-btn {
+      position: absolute; top: 4px; right: 4px; z-index: 2;
+      background: var(--s3); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--sub); font-size: 0.75rem;
+      cursor: pointer; padding: 2px 7px; line-height: 1.4;
+      transition: background 0.1s, color 0.1s;
+    }
+    .ft-layout-btn:hover { background: var(--s2); color: var(--text); }
+
+    /* ── First/Then library overlay ── */
+    .ft-lib-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(6,10,20,0.82);
+      backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center;
+    }
+    .ft-lib-overlay.open { display: flex; }
+    .ft-lib-panel {
+      background: var(--s1); border: 1px solid var(--border);
+      border-radius: 20px; width: 500px; max-width: 94vw; max-height: 80vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    }
+    .ft-lib-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px 8px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .ft-lib-header h3 { font-size: 0.9rem; font-weight: 700; }
+    .ft-lib-close-btn {
+      background: none; border: none; color: var(--sub);
+      font-size: 1.2rem; cursor: pointer; padding: 2px 8px; border-radius: 8px;
+    }
+    .ft-lib-close-btn:hover { background: var(--s2); color: var(--text); }
+    .ft-lib-search-row {
+      padding: 8px 12px; flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .ft-lib-search-row input {
+      width: 100%; background: var(--s2); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text); padding: 7px 12px;
+      font-size: 0.85rem; outline: none;
+    }
+    .ft-lib-search-row input:focus { border-color: var(--accent); }
+    .ft-lib-tabs {
+      display: flex; gap: 5px; padding: 8px 12px;
+      flex-wrap: wrap; border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .ft-lib-tab {
+      background: var(--s2); border: 1px solid var(--border);
+      border-radius: 999px; padding: 3px 11px;
+      font-size: 0.7rem; font-weight: 600; cursor: pointer; color: var(--sub);
+      transition: background 0.1s, color 0.1s;
+    }
+    .ft-lib-tab.active { background: var(--accent); color: #061020; border-color: var(--accent); }
+    .ft-lib-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 8px; padding: 12px; overflow-y: auto; flex: 1;
+    }
+    .ft-lib-card {
+      background: var(--s2); border: 1px solid var(--border);
+      border-radius: 11px; padding: 8px 6px;
+      display: flex; flex-direction: column; align-items: center; gap: 5px;
+      cursor: pointer; transition: background 0.1s, border-color 0.1s, transform 0.1s;
+    }
+    .ft-lib-card:hover { background: var(--s3); border-color: var(--accent); transform: translateY(-2px); }
+    .ft-lib-card:active { transform: scale(0.93); }
+    .ft-lib-card img { width: 64px; height: 64px; object-fit: contain; }
+    .ft-lib-lbl { font-size: 0.58rem; color: var(--sub); text-align: center; font-weight: 600; line-height: 1.3; }
+    .ft-lib-status {
+      grid-column: 1/-1; text-align: center; color: var(--sub);
+      font-size: 0.8rem; padding: 24px 0;
+    }
+    .ft-lib-footer {
+      flex-shrink: 0; padding: 6px 14px;
+      border-top: 1px solid var(--border);
+      font-size: 0.65rem; color: var(--sub);
+      text-align: center;
+    }
+    .ft-lib-footer a { color: var(--accent); text-decoration: none; }
+    /* Panel image display */
+    .ft-img-btn img { width: 100%; max-height: 80px; object-fit: contain; border-radius: 6px; }
+
+    /* ── Text widget ── */
+    .text-widget {
+      height: 100%; display: flex; flex-direction: column;
+      padding: 10px;
+    }
+    .text-widget-toolbar {
+      display: flex; gap: 6px; align-items: center;
+      margin-bottom: 6px; flex-shrink: 0;
+    }
+    .text-size-btn {
+      background: var(--s2); border: 1px solid var(--border);
+      border-radius: 6px; color: var(--sub); padding: 2px 8px;
+      font-size: 0.72rem; cursor: pointer; font-weight: 600;
+    }
+    .text-size-btn.active { background: var(--accent); color: #061020; border-color: var(--accent); }
+    .text-editor {
+      flex: 1; background: none; border: none; outline: none;
+      color: var(--text); font-family: inherit; resize: none;
+      font-size: 1.1rem; line-height: 1.5; width: 100%;
+      placeholder-color: var(--sub);
+    }
+    .text-editor::placeholder { color: var(--sub); }
+
+    .sound-group {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 5px 10px 5px 8px;
+    }
+    .sound-lbl {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 0.76rem; color: var(--sub);
+      cursor: pointer; user-select: none;
+    }
+    .sound-lbl input { accent-color: var(--accent); }
+    #sound-select {
+      background: var(--s3);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 6px;
+      font-size: 0.76rem;
+      cursor: pointer; outline: none;
+    }
+    #sound-select:focus { border-color: var(--accent); }
+    #preview-sound {
+      background: none; border: none;
+      color: var(--sub); font-size: 0.78rem;
+      cursor: pointer; padding: 2px 4px;
+      border-radius: 6px; line-height: 1;
+      transition: color 0.08s, background 0.08s;
+    }
+    #preview-sound:hover { color: var(--accent); background: var(--s3); }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">online<span>visualtimer</span>.com</div>
+  <div class="tagline">Visual timer widgets for classrooms, focus &amp; more</div>
+</header>
+
+<div id="board"></div>
+
+<!-- Add Widget Overlay -->
+<div id="add-overlay">
+  <div class="overlay-card">
+    <div class="overlay-top">
+      <h3>Add a widget</h3>
+      <button class="overlay-x" id="close-overlay">×</button>
+    </div>
+    <div class="widget-grid">
+      <button class="wt-btn" data-type="circle">
+        <span class="wt-icon">⭕</span><span class="wt-label">Circle</span>
+      </button>
+      <button class="wt-btn" data-type="bar">
+        <span class="wt-icon">▬</span><span class="wt-label">Progress Bar</span>
+      </button>
+      <button class="wt-btn" data-type="blocks">
+        <span class="wt-icon">▦</span><span class="wt-label">Blocks</span>
+      </button>
+      <button class="wt-btn" data-type="dots">
+        <span class="wt-icon">·̤·</span><span class="wt-label">Dots</span>
+      </button>
+      <button class="wt-btn" data-type="liquid">
+        <span class="wt-icon">💧</span><span class="wt-label">Liquid</span>
+      </button>
+      <button class="wt-btn" data-type="hourglass">
+        <span class="wt-icon">⏳</span><span class="wt-label">Hourglass</span>
+      </button>
+      <button class="wt-btn" data-type="clock">
+        <span class="wt-icon">🕐</span><span class="wt-label">Clock</span>
+      </button>
+      <button class="wt-btn" data-type="digital">
+        <span class="wt-icon">🔢</span><span class="wt-label">Digital</span>
+      </button>
+      <button class="wt-btn" data-type="firstthen">
+        <span class="wt-icon">✅</span><span class="wt-label">First / Then</span>
+      </button>
+      <button class="wt-btn" data-type="text">
+        <span class="wt-icon">📝</span><span class="wt-label">Text</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Background image panel -->
+<div id="bg-overlay">
+  <div class="bg-panel-header">
+    <h3>Background</h3>
+    <button class="bg-close" id="close-bg">×</button>
+  </div>
+  <div class="opacity-row">
+    <label for="widget-opacity">Window opacity</label>
+    <input type="range" id="widget-opacity" min="0" max="100" value="82" />
+    <span class="opacity-val" id="opacity-val">82%</span>
+  </div>
+  <div class="invisible-row">
+    <label>
+      <input type="checkbox" id="invisible-frames" />
+      Hide window frames completely
+    </label>
+  </div>
+  <div class="bg-tabs">
+    <button class="bg-tab active" data-cat="all">All</button>
+    <button class="bg-tab" data-cat="nature">Nature</button>
+    <button class="bg-tab" data-cat="space">Space</button>
+    <button class="bg-tab" data-cat="abstract">Abstract</button>
+    <button class="bg-tab" data-cat="calm">Calm</button>
+    <button class="bg-tab" data-cat="warm">Warm</button>
+  </div>
+  <div class="bg-grid" id="bg-grid"></div>
+</div>
+
+<div id="done-banner">⏰ Time's Up!</div>
+
+<!-- Controls Bar -->
+<div id="controls-bar">
+
+  <!-- col 1: empty spacer (makes col 2 truly centred) -->
+  <div></div>
+
+  <!-- col 2: timer controls, centred -->
+  <div class="ctrl-center">
+    <div class="digit-timer" id="digit-timer">
+      <div class="digit-col">
+        <button class="dbt" data-delta="600">+</button>
+        <span class="dgt" id="d0">0</span>
+        <button class="dbt" data-delta="-600">−</button>
+      </div>
+      <div class="digit-col">
+        <button class="dbt" data-delta="60">+</button>
+        <span class="dgt" id="d1">5</span>
+        <button class="dbt" data-delta="-60">−</button>
+      </div>
+      <div class="digit-sep">:</div>
+      <div class="digit-col">
+        <button class="dbt" data-delta="10">+</button>
+        <span class="dgt" id="d2">0</span>
+        <button class="dbt" data-delta="-10">−</button>
+      </div>
+      <div class="digit-col">
+        <button class="dbt" data-delta="1">+</button>
+        <span class="dgt" id="d3">0</span>
+        <button class="dbt" data-delta="-1">−</button>
+      </div>
+    </div>
+    <button class="btn btn-start" id="start-btn">▶ Start</button>
+    <button class="btn btn-reset" id="reset-btn">↺ Reset</button>
+    <div class="sound-group">
+      <label class="sound-lbl">
+        <input type="checkbox" id="sound-check" checked />🔔
+      </label>
+      <select id="sound-select">
+        <option value="chime">Chime</option>
+        <option value="bell">Bell</option>
+        <option value="ding">Ding</option>
+        <option value="alarm">Alarm</option>
+        <option value="fanfare">Fanfare</option>
+        <option value="buzzer">Buzzer</option>
+      </select>
+      <button id="preview-sound" title="Preview sound">▶</button>
+    </div>
+  </div>
+
+  <!-- col 3: layout buttons, right-aligned -->
+  <div class="ctrl-right">
+    <button id="bg-btn" title="Background image">🖼 Background</button>
+    <button id="layout-btn" title="Reset layout">⊞ Reset Layout</button>
+    <button id="add-btn">＋ Add Widget</button>
+  </div>
+
+</div>
+
+<script>
+// ── Timer state ───────────────────────────────────────────────────────────────
+let totalSeconds  = 5 * 60;
+let remaining     = totalSeconds; // updated every RAF frame — fractional
+let running       = false;
+let startStamp    = null;   // performance.now() when last started/resumed
+let pausedElapsed = 0;      // seconds elapsed at last pause
+
+function getElapsed() {
+  if (!running || startStamp === null) return pausedElapsed;
+  return pausedElapsed + (performance.now() - startStamp) / 1000;
+}
+function getPreciseRemaining() {
+  return Math.max(0, totalSeconds - getElapsed());
+}
+
+// ── Widget registry ───────────────────────────────────────────────────────────
+const WIDGET_META = {
+  circle:    { name: 'Circle Timer',  defaultW: 290, defaultH: 330 },
+  bar:       { name: 'Progress Bar',  defaultW: 380, defaultH: 110 },
+  blocks:    { name: 'Blocks',        defaultW: 360, defaultH: 270 },
+  dots:      { name: 'Dots',          defaultW: 360, defaultH: 270 },
+  liquid:    { name: 'Liquid Timer',  defaultW: 170, defaultH: 370 },
+  hourglass: { name: 'Hourglass',     defaultW: 170, defaultH: 380 },
+  clock:     { name: 'Analog Clock',  defaultW: 280, defaultH: 300 },
+  digital:   { name: 'Digital',       defaultW: 300, defaultH: 170 },
+  firstthen: { name: 'First / Then',  defaultW: 400, defaultH: 260, dom: true },
+  text:      { name: 'Text',          defaultW: 320, defaultH: 220, dom: true },
+};
+
+let widgets = [];
+let nextId  = 0;
+let topZ    = 10;
+const board = document.getElementById('board');
+
+// ── Grid snap (for manual drag/resize only) ───────────────────────────────────
+const SNAP = 20;
+function snap(v) { return Math.round(v / SNAP) * SNAP; }
+
+// ── Auto-layout: pixel-perfect tiling — no snap rounding here ────────────────
+const M = 8;  // outer margin
+const G = 8;  // gap between widgets
+
+function gridFor(n) {
+  if (n <= 1) return [1, 1];
+  if (n <= 2) return [2, 1];
+  if (n <= 3) return [3, 1];
+  if (n <= 4) return [2, 2];
+  if (n <= 6) return [3, 2];
+  if (n <= 8) return [4, 2];
+  return [4, Math.ceil(n / 4)];
+}
+
+function autoLayout(animate = true) {
+  const n = widgets.length;
+  if (n === 0) return;
+  const [cols, rows] = gridFor(n);
+
+  // Use exact Math.round — no SNAP rounding — so widgets fill the board perfectly
+  const availW = board.clientWidth  - M * 2;
+  const availH = board.clientHeight - M * 2;
+  const cellW  = Math.round((availW - G * (cols - 1)) / cols);
+  const cellH  = Math.round((availH - G * (rows - 1)) / rows);
+
+  if (animate) {
+    widgets.forEach(w => w.card.classList.add('animating'));
+    setTimeout(() => widgets.forEach(w => w.card.classList.remove('animating')), 180);
+  }
+  widgets.forEach((w, i) => {
+    const c = i % cols, r = Math.floor(i / cols);
+    w.card.style.left   = (M + c * (cellW + G)) + 'px';
+    w.card.style.top    = (M + r * (cellH + G)) + 'px';
+    w.card.style.width  = cellW + 'px';
+    w.card.style.height = cellH + 'px';
+  });
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+// Smoothly interpolate between hex colours
+function lerpHex(a, b, t) {
+  const p = s => parseInt(s, 16);
+  const r = Math.round(p(a.slice(1,3)) + (p(b.slice(1,3))-p(a.slice(1,3)))*t);
+  const g = Math.round(p(a.slice(3,5)) + (p(b.slice(3,5))-p(a.slice(3,5)))*t);
+  const bv= Math.round(p(a.slice(5,7)) + (p(b.slice(5,7))-p(a.slice(5,7)))*t);
+  return '#'+[r,g,bv].map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+// Continuous colour: green → yellow → orange → red with no hard cuts
+function timerColor(pct) {
+  if (pct >= 0.5)  return '#22c55e';
+  if (pct >= 0.25) return lerpHex('#f0b429','#22c55e',(pct-0.25)/0.25);
+  if (pct >= 0.1)  return lerpHex('#f97316','#f0b429',(pct-0.1)/0.15);
+  return                   lerpHex('#ef4444','#f97316', pct/0.1);
+}
+
+// Keep for any leftover refs
+function timerColors(pct) {
+  const c=timerColor(pct); return { base:c, light:c, glow:c };
+}
+function fmt(s) {
+  const secs = Math.max(0, Math.ceil(s - 0.001)); // ceil so display shows whole seconds remaining
+  return `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
+}
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ── Create widget ─────────────────────────────────────────────────────────────
+function createWidget(type) {
+  const id   = ++nextId;
+  const meta = WIDGET_META[type];
+
+  const card = document.createElement('div');
+  card.className = 'widget-card';
+  card.id = `w${id}`;
+  // Start hidden at 0,0 — autoLayout will place & reveal it
+  card.style.cssText = `left:0;top:0;width:${meta.defaultW}px;height:${meta.defaultH}px;z-index:${topZ++};opacity:0;pointer-events:none`;
+
+  if (meta.dom) {
+    // DOM-based widget — no canvas
+    card.innerHTML = `
+      <div class="widget-header">
+        <div class="widget-title"><span class="drag-dots">⠿⠿</span>${meta.name}</div>
+        <button class="widget-close" title="Remove">×</button>
+      </div>
+      <div class="widget-body" id="wb-${id}"></div>
+      <div class="resize-handle"></div>`;
+    board.appendChild(card);
+    card.querySelector('.widget-close').addEventListener('click', e => { e.stopPropagation(); removeWidget(id); });
+    const domBody = card.querySelector('.widget-body');
+    if (type === 'firstthen') initFirstThen(domBody);
+    if (type === 'text')      initText(domBody);
+    const widget = { id, type, card, dom: true, ro: { disconnect(){} } };
+    widgets.push(widget);
+    makeDraggable(card); makeResizable(card);
+  } else {
+    // Canvas-based widget
+    card.innerHTML = `
+      <div class="widget-header">
+        <div class="widget-title"><span class="drag-dots">⠿⠿</span>${meta.name}</div>
+        <button class="widget-close" title="Remove">×</button>
+      </div>
+      <div class="widget-body"><canvas></canvas></div>
+      <div class="resize-handle"></div>`;
+    board.appendChild(card);
+
+    const body   = card.querySelector('.widget-body');
+    const canvas = card.querySelector('canvas');
+    const ctx    = canvas.getContext('2d');
+    const state  = { drops:[], grains:[], lastSpawn:0 };
+    const ro = new ResizeObserver(() => {
+      canvas.width  = body.clientWidth;
+      canvas.height = body.clientHeight;
+    });
+    ro.observe(body);
+    card.querySelector('.widget-close').addEventListener('click', e => { e.stopPropagation(); removeWidget(id); });
+    const widget = { id, type, card, canvas, ctx, state, ro };
+    widgets.push(widget);
+    makeDraggable(card); makeResizable(card);
+  }
+
+  // Position all widgets, then fade the new one in immediately
+  autoLayout(true);
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    card.style.transition = 'opacity .12s ease';
+    card.style.opacity = '1';
+    card.style.pointerEvents = '';
+    setTimeout(() => { card.style.transition = ''; }, 140);
+  }));
+
+  return widget;
+}
+
+function removeWidget(id) {
+  const w = widgets.find(w => w.id === id);
+  if (!w) return;
+  w.ro.disconnect();
+  w.card.style.transition = 'opacity .1s, transform .1s';
+  w.card.style.opacity = '0';
+  w.card.style.transform = 'scale(.88)';
+  w.card.style.pointerEvents = 'none';
+  setTimeout(() => {
+    w.card.remove();
+    widgets = widgets.filter(x => x.id !== id);
+    autoLayout(true);
+  }, 110);
+}
+
+// ── Drag ─────────────────────────────────────────────────────────────────────
+function makeDraggable(card) {
+  const header = card.querySelector('.widget-header');
+  let drag = false, ox = 0, oy = 0;
+
+  function startDrag(cx, cy) {
+    drag = true;
+    const br = board.getBoundingClientRect();
+    ox = cx - br.left - card.offsetLeft;
+    oy = cy - br.top  - card.offsetTop;
+    card.style.zIndex = ++topZ;
+    card.classList.add('dragging');
+  }
+  function moveDrag(cx, cy) {
+    if (!drag) return;
+    const br = board.getBoundingClientRect();
+    // Snap to grid in real-time for satisfying "magnetic" feel
+    card.style.left = snap(Math.max(0, cx - br.left - ox)) + 'px';
+    card.style.top  = snap(Math.max(0, cy - br.top  - oy)) + 'px';
+  }
+  function endDrag() {
+    drag = false; card.classList.remove('dragging');
+    card.style.left = snap(card.offsetLeft) + 'px';
+    card.style.top  = snap(card.offsetTop)  + 'px';
+  }
+
+  header.addEventListener('mousedown', e => {
+    if (e.target.classList.contains('widget-close')) return;
+    startDrag(e.clientX, e.clientY); e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+  document.addEventListener('mouseup', endDrag);
+
+  header.addEventListener('touchstart', e => {
+    if (e.target.classList.contains('widget-close')) return;
+    const t = e.touches[0];
+    startDrag(t.clientX, t.clientY); e.preventDefault();
+  }, { passive:false });
+  document.addEventListener('touchmove', e => {
+    if (!drag) return;
+    moveDrag(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault();
+  }, { passive:false });
+  document.addEventListener('touchend', endDrag);
+}
+
+// ── Resize (custom handle — gives us live grid snap) ─────────────────────────
+function makeResizable(card) {
+  const handle = card.querySelector('.resize-handle');
+  let resizing = false, startW, startH, startX, startY;
+
+  function startResize(cx, cy) {
+    resizing = true;
+    startW = card.offsetWidth;
+    startH = card.offsetHeight;
+    startX = cx; startY = cy;
+    card.style.zIndex = ++topZ;
+  }
+  function doResize(cx, cy) {
+    if (!resizing) return;
+    const minW = 160, minH = 140;
+    card.style.width  = snap(Math.max(minW, startW + cx - startX)) + 'px';
+    card.style.height = snap(Math.max(minH, startH + cy - startY)) + 'px';
+  }
+  function endResize() { resizing = false; }
+
+  handle.addEventListener('mousedown', e => {
+    startResize(e.clientX, e.clientY);
+    e.preventDefault(); e.stopPropagation();
+  });
+  document.addEventListener('mousemove', e => doResize(e.clientX, e.clientY));
+  document.addEventListener('mouseup', endResize);
+
+  handle.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startResize(t.clientX, t.clientY);
+    e.preventDefault(); e.stopPropagation();
+  }, { passive: false });
+  document.addEventListener('touchmove', e => {
+    if (!resizing) return;
+    doResize(e.touches[0].clientX, e.touches[0].clientY);
+    e.preventDefault();
+  }, { passive: false });
+  document.addEventListener('touchend', endResize);
+}
+
+// ── Add overlay ───────────────────────────────────────────────────────────────
+const overlay = document.getElementById('add-overlay');
+document.getElementById('add-btn').addEventListener('click', () => overlay.classList.add('open'));
+document.getElementById('close-overlay').addEventListener('click', () => overlay.classList.remove('open'));
+overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+document.querySelectorAll('.wt-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    createWidget(btn.dataset.type); // autoLayout handles positioning
+    overlay.classList.remove('open');
+  });
+});
+
+document.getElementById('layout-btn').addEventListener('click', () => autoLayout(true));
+
+// ── First/Then library — powered by ARASAAC ───────────────────────────────────
+const ARASAAC_IMG = id => `https://static.arasaac.org/pictograms/${id}/${id}_300.png`;
+
+async function fetchArasaac(query) {
+  const base   = `https://api.arasaac.org/v1/pictograms/search/en/${encodeURIComponent(query)}`;
+  const proxy  = `https://corsproxy.io/?${encodeURIComponent(base)}`;
+  for (const url of [base, proxy]) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return await res.json();
+    } catch {}
+  }
+  return null;
+}
+
+// Default search term per category tab
+const FT_CAT_TERMS = {
+  all:        'school',
+  subjects:   'classroom subject',
+  activities: 'activity school',
+  services:   'therapy',
+  rewards:    'reward fun',
+  routines:   'routine daily',
+};
+
+let ftLibTarget = null;
+let ftSearchTimer = null;
+
+function openFtLibrary(btn) {
+  ftLibTarget = btn;
+  let ov = document.getElementById('ft-lib-ov');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'ft-lib-ov';
+    ov.className = 'ft-lib-overlay';
+    ov.innerHTML = `
+      <div class="ft-lib-panel">
+        <div class="ft-lib-header">
+          <h3>Choose a pictogram</h3>
+          <button class="ft-lib-close-btn">×</button>
+        </div>
+        <div class="ft-lib-search-row">
+          <input id="ft-lib-search" type="text" placeholder="🔍  Search pictograms..." />
+        </div>
+        <div class="ft-lib-tabs">
+          <button class="ft-lib-tab active" data-cat="all">All</button>
+          <button class="ft-lib-tab" data-cat="subjects">Subjects</button>
+          <button class="ft-lib-tab" data-cat="activities">Activities</button>
+          <button class="ft-lib-tab" data-cat="services">Services</button>
+          <button class="ft-lib-tab" data-cat="rewards">Rewards</button>
+          <button class="ft-lib-tab" data-cat="routines">Routines</button>
+        </div>
+        <div class="ft-lib-grid" id="ft-lib-grid"></div>
+        <div class="ft-lib-footer">
+          Pictograms by <a href="https://arasaac.org" target="_blank">ARASAAC</a>
+          — Aragonese Government &amp; University of Zaragoza (CC BY-NC-SA 4.0)
+        </div>
+      </div>`;
+    document.body.appendChild(ov);
+
+    ov.querySelector('.ft-lib-close-btn').addEventListener('click', closeFtLib);
+    ov.addEventListener('click', e => { if (e.target === ov) closeFtLib(); });
+
+    // Category tabs
+    ov.querySelectorAll('.ft-lib-tab').forEach(t => t.addEventListener('click', () => {
+      ov.querySelectorAll('.ft-lib-tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      ov.querySelector('#ft-lib-search').value = '';
+      loadFtPictograms(FT_CAT_TERMS[t.dataset.cat] || t.dataset.cat);
+    }));
+
+    // Live search
+    ov.querySelector('#ft-lib-search').addEventListener('input', e => {
+      clearTimeout(ftSearchTimer);
+      const q = e.target.value.trim();
+      if (q.length < 2) return;
+      ov.querySelectorAll('.ft-lib-tab').forEach(x => x.classList.remove('active'));
+      ftSearchTimer = setTimeout(() => loadFtPictograms(q), 350);
+    });
+  }
+
+  // Reset to default
+  ov.querySelector('#ft-lib-search').value = '';
+  ov.querySelectorAll('.ft-lib-tab').forEach(t => t.classList.toggle('active', t.dataset.cat==='all'));
+  loadFtPictograms(FT_CAT_TERMS.all);
+  ov.classList.add('open');
+}
+
+function closeFtLib() {
+  const ov = document.getElementById('ft-lib-ov');
+  if (ov) ov.classList.remove('open');
+  ftLibTarget = null;
+}
+
+async function loadFtPictograms(query) {
+  const grid = document.getElementById('ft-lib-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div class="ft-lib-status">Loading pictograms…</div>';
+  const data = await fetchArasaac(query);
+  if (!data) {
+    grid.innerHTML = '<div class="ft-lib-status">Couldn\'t reach the pictogram library.<br>Works fully when deployed — try again online.</div>';
+    return;
+  }
+  const items = data.slice(0, 40);
+  grid.innerHTML = '';
+  if (!items.length) {
+    grid.innerHTML = '<div class="ft-lib-status">No results — try a different search term.</div>';
+    return;
+  }
+  items.forEach(pic => {
+    const keyword = pic.keywords?.[0]?.keyword || query;
+    const card = document.createElement('button');
+    card.className = 'ft-lib-card';
+    card.innerHTML = `<img src="${ARASAAC_IMG(pic._id)}" alt="${keyword}" loading="lazy" /><span class="ft-lib-lbl">${keyword}</span>`;
+    card.addEventListener('click', () => {
+      if (ftLibTarget) {
+        ftLibTarget.innerHTML = `<img src="${ARASAAC_IMG(pic._id)}" alt="${keyword}" />`;
+        const inp = ftLibTarget.closest('.ft-panel').querySelector('.ft-text');
+        if (inp) inp.value = keyword;
+      }
+      closeFtLib();
+    });
+    grid.appendChild(card);
+  });
+}
+
+// ── DOM widget: First / Then ──────────────────────────────────────────────────
+function initFirstThen(body) {
+  body.innerHTML = `
+    <div class="ft-widget" id="ftw-${Date.now()}">
+      <button class="ft-layout-btn" title="Toggle layout">⇄</button>
+      <div class="ft-panel ft-first-panel">
+        <div class="ft-done-check">✅</div>
+        <div class="ft-label">FIRST</div>
+        <button class="ft-img-btn" title="Pick activity">🎯</button>
+        <input class="ft-text" placeholder="Activity..." value="Reading" />
+        <button class="ft-done-btn">✓ Done</button>
+      </div>
+      <div class="ft-arrow">→</div>
+      <div class="ft-panel">
+        <div class="ft-label">THEN</div>
+        <button class="ft-img-btn" title="Pick activity">⭐</button>
+        <input class="ft-text" placeholder="Reward..." value="Free time" />
+      </div>
+    </div>`;
+
+  const widget     = body.querySelector('.ft-widget');
+  const firstPanel = body.querySelector('.ft-first-panel');
+  const doneBtn    = body.querySelector('.ft-done-btn');
+  const layoutBtn  = body.querySelector('.ft-layout-btn');
+  let done = false, vertical = false;
+
+  // Layout toggle
+  layoutBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    vertical = !vertical;
+    widget.classList.toggle('vertical', vertical);
+    layoutBtn.textContent = vertical ? '⇅' : '⇄';
+  });
+
+  // Done toggle
+  doneBtn.addEventListener('click', () => {
+    done = !done;
+    firstPanel.classList.toggle('done', done);
+    doneBtn.textContent = done ? '↩ Undo' : '✓ Done';
+    doneBtn.classList.toggle('undone', done);
+  });
+
+  // Image buttons → open library
+  body.querySelectorAll('.ft-img-btn').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); openFtLibrary(btn); });
+  });
+}
+
+// ── DOM widget: Text / Notes ───────────────────────────────────────────────────
+function initText(body) {
+  body.innerHTML = `
+    <div class="text-widget">
+      <div class="text-widget-toolbar">
+        <button class="text-size-btn" data-size="0.9rem">S</button>
+        <button class="text-size-btn active" data-size="1.1rem">M</button>
+        <button class="text-size-btn" data-size="1.5rem">L</button>
+        <button class="text-size-btn" data-size="2.2rem">XL</button>
+      </div>
+      <textarea class="text-editor" placeholder="Type something..."></textarea>
+    </div>`;
+
+  const editor = body.querySelector('.text-editor');
+  body.querySelectorAll('.text-size-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      body.querySelectorAll('.text-size-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      editor.style.fontSize = btn.dataset.size;
+    });
+  });
+}
+
+// ── RAF render loop ───────────────────────────────────────────────────────────
+function loop() {
+  // Precise sub-second remaining — drives smooth visual interpolation
+  remaining = getPreciseRemaining();
+
+  // Detect timer completion
+  if (running && remaining <= 0) {
+    running = false; startStamp = null; pausedElapsed = totalSeconds;
+    remaining = 0;
+    doneBanner.style.display = 'block';
+    playDone();
+    setInputsDisabled(false);
+    startBtn.textContent = '▶ Start';
+  }
+
+  const pct = totalSeconds > 0 ? remaining / totalSeconds : 0;
+  const col = timerColor(pct);
+  // Drive the board ambient colour bloom
+  document.documentElement.style.setProperty('--flow-col', timerColors(pct).base + '0d');
+  for (const w of widgets) {
+    if (w.dom) continue; // DOM widgets update themselves
+    const { canvas:cv, ctx, type, state } = w;
+    const W = cv.width, H = cv.height;
+    if (W < 10 || H < 10) continue;
+    ctx.clearRect(0, 0, W, H);
+    switch (type) {
+      case 'circle':    drawCircle(ctx,W,H,pct,col);        break;
+      case 'bar':       drawBar(ctx,W,H,pct,col);            break;
+      case 'blocks':    drawBlocks(ctx,W,H,pct,col);         break;
+      case 'dots':      drawDots(ctx,W,H,pct,col);           break;
+      case 'digital':   drawDigital(ctx,W,H,pct,col);        break;
+      case 'clock':     drawClock(ctx,W,H,pct,col);          break;
+      case 'liquid':    drawLiquid(ctx,W,H,pct,col,state);   break;
+      case 'hourglass': drawHourglass(ctx,W,H,pct,col,state);break;
+    }
+  }
+  requestAnimationFrame(loop);
+}
+
+// ── Render: Circle ────────────────────────────────────────────────────────────
+function drawCircle(ctx, W, H, pct, col) {
+  const cx=W/2, cy=H/2, r=Math.min(W,H)/2-26;
+  if (r < 10) return;
+  // Pulse ring thickness in final 10% for urgency
+  const urgencyPulse = pct < 0.1 ? Math.sin(performance.now()/120)*2 : 0;
+  const lw = Math.max(10, r*0.13) + urgencyPulse;
+
+  // Track ring
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.strokeStyle='#1a2844'; ctx.lineWidth=lw; ctx.stroke();
+
+  if (pct > 0) {
+    const hand=-Math.PI/2+(1-pct)*Math.PI*2, end=Math.PI*3/2;
+    // Flat pie fill
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r-1,hand,end); ctx.closePath();
+    ctx.fillStyle=col+'22'; ctx.fill();
+    // Flat arc
+    ctx.beginPath(); ctx.arc(cx,cy,r,hand,end);
+    ctx.strokeStyle=col; ctx.lineWidth=lw; ctx.lineCap='round'; ctx.stroke();
+  }
+
+  // Time text — flat
+  const fs=Math.max(16,Math.min(r*0.52,90));
+  ctx.fillStyle=col; ctx.font=`900 ${fs}px -apple-system,sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(fmt(remaining),cx,cy);
+}
+
+// ── Render: Bar ───────────────────────────────────────────────────────────────
+function drawBar(ctx, W, H, pct, col) {
+  const pad=16, bh=Math.min(70,H*0.28), bw=W-pad*2, r=bh/2;
+  const tall=H>bh*3.5, by=tall?H*0.38-bh/2:(H-bh)/2;
+
+  // Track — flat
+  rrect(ctx,pad,by,bw,bh,r); ctx.fillStyle='#1a2844'; ctx.fill();
+
+  // Fill — flat colour
+  const fw=bw*pct;
+  if (fw>2) { rrect(ctx,pad+bw-fw,by,fw,bh,r); ctx.fillStyle=col; ctx.fill(); }
+
+  // Time label
+  if (tall) {
+    const fs=Math.min(W*0.28,H*0.22,80);
+    ctx.fillStyle=col; ctx.font=`900 ${fs}px -apple-system,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(fmt(remaining),W/2,H*0.18);
+  } else {
+    ctx.fillStyle='#fff'; ctx.font=`800 ${Math.min(bh*.5,28)}px -apple-system,sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(fmt(remaining),W/2,by+bh/2);
+  }
+}
+
+// ── Render: Blocks — each cell drains individually ────────────────────────────
+function drawBlocks(ctx, W, H, pct, col) {
+  const C=10, R=6, T=C*R, pad=16, gap=5;
+  const cell=Math.min((W-pad*2-gap*(C-1))/C,(H-pad*2-gap*(R-1))/R,48);
+  const gw=C*cell+(C-1)*gap, gh=R*cell+(R-1)*gap;
+  const ox=(W-gw)/2, oy=(H-gh)/2;
+  const rc=Math.min(10, cell*0.28);
+  const elapsed=(1-pct)*T; // fractional blocks consumed
+
+  for (let i=0; i<T; i++) {
+    const bx=ox+(i%C)*(cell+gap), by=oy+Math.floor(i/C)*(cell+gap);
+
+    // Dark base
+    rrect(ctx,bx,by,cell,cell,rc);
+    ctx.fillStyle='#1a2844'; ctx.globalAlpha=0.4; ctx.fill();
+    ctx.globalAlpha=1;
+
+    if (elapsed <= i) {
+      // Fully remaining — solid fill
+      rrect(ctx,bx,by,cell,cell,rc); ctx.fillStyle=col; ctx.fill();
+    } else if (elapsed < i+1) {
+      // Currently draining — liquid surface ripples as level drops
+      const t = performance.now()/1000;
+      const fillH = cell * (1-(elapsed-i));
+      const surfY = by + cell - fillH;
+      // Urgency: wave gets faster + bigger in final 10%
+      const urgency = pct < 0.1 ? 2.5 : 1;
+      const amp  = Math.min(fillH*0.3, 2.5) * urgency;
+      const freq = pct < 0.1 ? 6 : 4;
+      const spd  = pct < 0.1 ? 5 : 3;
+
+      ctx.save();
+      rrect(ctx,bx,by,cell,cell,rc); ctx.clip();
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      // Wavy surface
+      for (let s=0; s<=16; s++) {
+        const wx = bx + s*(cell/16);
+        const wy = surfY + Math.sin(s/16*Math.PI*freq + t*spd)*amp;
+        s===0 ? ctx.moveTo(wx, wy) : ctx.lineTo(wx, wy);
+      }
+      ctx.lineTo(bx+cell, by+cell);
+      ctx.lineTo(bx, by+cell);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    // else fully drained — dark base only
+  }
+}
+
+// ── Render: Dots — each dot drains individually ────────────────────────────────
+function drawDots(ctx, W, H, pct, col) {
+  const C=10, R=6, T=C*R, pad=16, gap=6;
+  const diam=Math.min((W-pad*2-gap*(C-1))/C,(H-pad*2-gap*(R-1))/R,44);
+  const r=diam/2;
+  const gw=C*diam+(C-1)*gap, gh=R*diam+(R-1)*gap;
+  const ox=(W-gw)/2, oy=(H-gh)/2;
+  const elapsed=(1-pct)*T;
+
+  for (let i=0; i<T; i++) {
+    const dcx=ox+(i%C)*(diam+gap)+r, dcy=oy+Math.floor(i/C)*(diam+gap)+r;
+
+    // Dark base
+    ctx.beginPath(); ctx.arc(dcx,dcy,r,0,Math.PI*2);
+    ctx.fillStyle='#1a2844'; ctx.globalAlpha=0.4; ctx.fill();
+    ctx.globalAlpha=1;
+
+    if (elapsed <= i) {
+      // Full
+      ctx.beginPath(); ctx.arc(dcx,dcy,r,0,Math.PI*2);
+      ctx.fillStyle=col; ctx.fill();
+    } else if (elapsed < i+1) {
+      // Draining — wavy liquid surface inside the circle
+      const t = performance.now()/1000;
+      const fillH = diam * (1-(elapsed-i));
+      const surfY = dcy + r - fillH;
+      const urgency = pct < 0.1 ? 2.5 : 1;
+      const amp  = Math.min(fillH*0.35, 2.2) * urgency;
+      const spd  = pct < 0.1 ? 5 : 3;
+
+      ctx.save();
+      ctx.beginPath(); ctx.arc(dcx,dcy,r,0,Math.PI*2); ctx.clip();
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      for (let s=0; s<=12; s++) {
+        const wx = dcx - r + s*(diam/12);
+        const wy = surfY + Math.sin(s/12*Math.PI*4 + t*spd)*amp;
+        s===0 ? ctx.moveTo(wx,wy) : ctx.lineTo(wx,wy);
+      }
+      ctx.lineTo(dcx+r, dcy+r);
+      ctx.lineTo(dcx-r, dcy+r);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+// ── Render: Digital ───────────────────────────────────────────────────────────
+function drawDigital(ctx, W, H, pct, col) {
+  const fs=Math.min(W*.38,H*.58,110);
+  ctx.fillStyle=col; ctx.font=`900 ${fs}px -apple-system,sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(fmt(remaining),W/2,H/2);
+}
+
+// ── Render: Clock ─────────────────────────────────────────────────────────────
+function drawClock(ctx, W, H, pct, col) {
+  const cx=W/2, cy=H/2, r=Math.min(W,H)/2-12;
+  if (r<20) return;
+  ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fillStyle='#141e30'; ctx.fill();
+  ctx.strokeStyle='#1a2844'; ctx.lineWidth=3; ctx.stroke();
+  for (let i=0;i<60;i++) {
+    const a=(i/60)*Math.PI*2-Math.PI/2, big=i%5===0;
+    ctx.beginPath();
+    ctx.moveTo(cx+Math.cos(a)*(r-(big?14:8)),cy+Math.sin(a)*(r-(big?14:8)));
+    ctx.lineTo(cx+Math.cos(a)*(r-3),cy+Math.sin(a)*(r-3));
+    ctx.strokeStyle=big?'#3a5070':'#243354'; ctx.lineWidth=big?2:1; ctx.stroke();
+  }
+  if (pct>0) {
+    const hand=-Math.PI/2+(1-pct)*Math.PI*2, end=Math.PI*3/2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r-4,hand,end); ctx.closePath();
+    ctx.fillStyle=col+'30'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.lineTo(cx+Math.cos(hand)*(r-12),cy+Math.sin(hand)*(r-12));
+    ctx.strokeStyle=col; ctx.lineWidth=3; ctx.lineCap='round'; ctx.stroke();
+  }
+  ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fillStyle=col; ctx.fill();
+  const fs=Math.max(11,Math.min(r*.28,26));
+  ctx.fillStyle='#f0f4ff'; ctx.font=`700 ${fs}px -apple-system,sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(fmt(remaining),cx,cy+r*.45);
+}
+
+// ── Render: Liquid ────────────────────────────────────────────────────────────
+function drawLiquid(ctx, W, H, pct, col, state) {
+  const cw=Math.min(130,W*.68), ch=H-30, cx=W/2;
+  const x0=cx-cw/2, y0=15, pad=8;
+  const ix=x0+pad, iw=cw-pad*2, iy=y0+pad, ih=ch-pad*2;
+  const maxP=ih*.38, elapsed=1-pct;
+
+  rrect(ctx,x0,y0,cw,ch,18); ctx.fillStyle='rgba(255,255,255,.04)'; ctx.fill();
+  ctx.save(); rrect(ctx,ix,iy,iw,ih,12); ctx.clip();
+
+  const topH=pct*maxP;
+  if (topH>1) {
+    rrect(ctx,ix,iy,iw,topH,12); ctx.fillStyle=col+'c0'; ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.18)'; ctx.fillRect(ix,iy+topH-3,iw,3);
+  }
+  const botH=elapsed*maxP;
+  if (botH>1) {
+    rrect(ctx,ix,iy+ih-botH,iw,botH,12); ctx.fillStyle=col+'c0'; ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fillRect(ix,iy+ih-botH,iw,3);
+  }
+
+  const now=performance.now();
+  const bsy=iy+ih-botH-6;
+  if (running && pct>.02 && pct<.98 && now-state.lastSpawn>300+pct*800) {
+    state.lastSpawn=now;
+    const r=5+Math.random()*8;
+    state.drops.push({x:ix+iw/2+(Math.random()-.5)*iw*.3,y:iy+topH+r,vy:.4+Math.random()*.3,r,wp:Math.random()*Math.PI*2,wsp:.04+Math.random()*.03});
+  }
+  state.drops=state.drops.filter(d=>{
+    d.vy=Math.min(d.vy+.12,6); d.y+=d.vy; d.wp+=d.wsp;
+    const bsy2=iy+ih-(1-(totalSeconds>0?remaining/totalSeconds:0))*maxP-8;
+    if(d.y+d.r>=bsy2) return false;
+    const dx=d.x+Math.sin(d.wp)*5;
+    ctx.beginPath(); ctx.ellipse(dx,d.y,d.r*.68,d.r,0,0,Math.PI*2);
+    ctx.fillStyle=col+'d0'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(dx-d.r*.22,d.y-d.r*.28,d.r*.22,d.r*.28,-.4,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.28)'; ctx.fill();
+    return true;
+  });
+  ctx.restore();
+
+  rrect(ctx,x0,y0,cw,ch,18);
+  ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.lineWidth=2.5; ctx.stroke();
+  ctx.save(); rrect(ctx,x0,y0,cw,ch,18); ctx.clip();
+  ctx.beginPath(); ctx.moveTo(cx-cw/2+9,y0+12); ctx.lineTo(cx-8,iy+ih/2);
+  ctx.strokeStyle='rgba(255,255,255,.1)'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke();
+  ctx.restore();
+}
+
+// ── Render: Hourglass ────────────────────────────────────────────────────────
+function drawHourglass(ctx, W, H, pct, col, state) {
+  const halfW=Math.min(66,W*.42), neck=6;
+  const cx=W/2, y0=28, bot=H-28, mid=(y0+bot)/2;
+  const elapsed=1-pct;
+
+  function hw(y) {
+    return y<=mid ? halfW+(neck-halfW)*(y-y0)/(mid-y0)
+                  : neck+(halfW-neck)*(y-mid)/(bot-mid);
+  }
+  function glass() {
+    ctx.beginPath();
+    ctx.moveTo(cx-halfW,y0); ctx.lineTo(cx+halfW,y0);
+    ctx.lineTo(cx+neck,mid); ctx.lineTo(cx+halfW,bot);
+    ctx.lineTo(cx-halfW,bot); ctx.lineTo(cx-neck,mid);
+    ctx.closePath();
+  }
+
+  glass(); ctx.fillStyle='#1a2a3a'; ctx.fill();
+  ctx.save(); glass(); ctx.clip();
+
+  const yt=y0+(1-pct)*(mid-y0), hwt=hw(yt);
+  if (pct>.002) {
+    ctx.beginPath();
+    ctx.moveTo(cx-hwt,yt); ctx.lineTo(cx+hwt,yt);
+    ctx.lineTo(cx+neck,mid); ctx.lineTo(cx-neck,mid); ctx.closePath();
+    const gt=ctx.createLinearGradient(0,yt,0,mid);
+    gt.addColorStop(0,col+'ee'); gt.addColorStop(1,col+'88');
+    ctx.fillStyle=gt; ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.2)'; ctx.fillRect(cx-hwt+1,yt,(hwt-1)*2,2);
+  }
+
+  const yb=bot-elapsed*(bot-mid), hwb=hw(yb);
+  if (elapsed>.002) {
+    ctx.beginPath();
+    ctx.moveTo(cx-hwb,yb); ctx.lineTo(cx+hwb,yb);
+    ctx.lineTo(cx+halfW,bot); ctx.lineTo(cx-halfW,bot); ctx.closePath();
+    const gb=ctx.createLinearGradient(0,yb,0,bot);
+    gb.addColorStop(0,col+'ee'); gb.addColorStop(1,col+'88');
+    ctx.fillStyle=gb; ctx.fill();
+    const dh=Math.min(elapsed*12,10);
+    ctx.beginPath();
+    ctx.moveTo(cx-hwb*.8,yb); ctx.quadraticCurveTo(cx,yb-dh,cx+hwb*.8,yb);
+    ctx.strokeStyle='rgba(255,255,255,.22)'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  const now=performance.now();
+  if (running && pct>.01 && pct<.995 && now-state.lastSpawn>90) {
+    state.lastSpawn=now;
+    for(let i=0;i<2;i++) state.grains.push({
+      x:cx+(Math.random()-.5)*neck*.7, y:mid+2, vy:1+Math.random()*1.5, r:1.3+Math.random()*1.2
+    });
+  }
+  state.grains=state.grains.filter(g=>{
+    g.vy+=.25; g.y+=g.vy;
+    const p=totalSeconds>0?remaining/totalSeconds:0;
+    const stop=bot-(1-p)*(bot-mid)-2;
+    if(g.y>=stop) return false;
+    ctx.beginPath(); ctx.arc(g.x,g.y,g.r,0,Math.PI*2);
+    ctx.fillStyle=timerColor(p)+'f0'; ctx.fill();
+    return true;
+  });
+  ctx.restore();
+
+  glass(); ctx.strokeStyle='rgba(255,255,255,.22)'; ctx.lineWidth=2; ctx.stroke();
+  const capX=cx-halfW-5, capW=halfW*2+10;
+  ctx.fillStyle='#334155';
+  ctx.fillRect(capX,y0-10,capW,10); ctx.fillRect(capX,bot,capW,10);
+  ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.lineWidth=1.5;
+  ctx.strokeRect(capX,y0-10,capW,10); ctx.strokeRect(capX,bot,capW,10);
+}
+
+// ── Timer logic ───────────────────────────────────────────────────────────────
+const doneBanner = document.getElementById('done-banner');
+const startBtn    = document.getElementById('start-btn');
+const soundCheck  = document.getElementById('sound-check');
+const soundSelect = document.getElementById('sound-select');
+const digitTimer  = document.getElementById('digit-timer');
+const dgtEls      = [0,1,2,3].map(i => document.getElementById(`d${i}`));
+
+function updateDigits() {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  dgtEls[0].textContent = Math.floor(m / 10);
+  dgtEls[1].textContent = m % 10;
+  dgtEls[2].textContent = Math.floor(s / 10);
+  dgtEls[3].textContent = s % 10;
+}
+
+function stopTimer() {
+  pausedElapsed = getElapsed(); // save where we paused
+  running = false; startStamp = null;
+}
+
+function setDuration(secs) {
+  running = false; startStamp = null; pausedElapsed = 0;
+  totalSeconds = Math.max(1, Math.min(secs, 5940));
+  remaining = totalSeconds;
+  doneBanner.style.display = 'none';
+  startBtn.textContent = '▶ Start';
+  updateDigits();
+}
+
+// Wire up each +/− button
+document.querySelectorAll('.dbt').forEach(btn => {
+  btn.addEventListener('click', () => setDuration(totalSeconds + parseInt(btn.dataset.delta)));
+});
+// ── Sound library ─────────────────────────────────────────────────────────────
+const SOUNDS = {
+  // Friendly ascending chime — good for primary classrooms
+  chime(ac) {
+    const t = ac.currentTime;
+    [[523,0,.5],[659,.28,.55],[784,.56,.7],[1046,.85,.9]].forEach(([f,s,d])=>{
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type='sine'; o.frequency.value=f;
+      g.gain.setValueAtTime(0,t+s);
+      g.gain.linearRampToValueAtTime(.9,t+s+.02);
+      g.gain.exponentialRampToValueAtTime(.001,t+s+d);
+      o.start(t+s); o.stop(t+s+d+.1);
+    });
+  },
+
+  // Rich school bell with harmonics + long sustain
+  bell(ac) {
+    const t=ac.currentTime;
+    [[440,1],[880,.5],[1320,.25],[1760,.12],[2200,.06]].forEach(([f,amp])=>{
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type='sine'; o.frequency.value=f;
+      g.gain.setValueAtTime(amp,t+.01);
+      g.gain.exponentialRampToValueAtTime(.001,t+3.0);
+      o.start(t); o.stop(t+3.1);
+    });
+  },
+
+  // Single crisp high ding
+  ding(ac) {
+    const t=ac.currentTime;
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type='sine'; o.frequency.value=1318; // E6
+    g.gain.setValueAtTime(1.0,t);
+    g.gain.exponentialRampToValueAtTime(.001,t+2.2);
+    o.start(t); o.stop(t+2.3);
+  },
+
+  // Urgent repeating alarm beeps
+  alarm(ac) {
+    const t=ac.currentTime;
+    for(let i=0;i<6;i++){
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type='square'; o.frequency.value=880;
+      g.gain.setValueAtTime(.8,t+i*.22);
+      g.gain.setValueAtTime(0,t+i*.22+.16);
+      o.start(t+i*.22); o.stop(t+i*.22+.18);
+    }
+  },
+
+  // Triumphant fanfare — great for celebrations
+  fanfare(ac) {
+    const t=ac.currentTime;
+    [[523,.0,.14],[523,.15,.14],[523,.3,.14],[659,.44,.32],[523,.76,.14],
+     [659,.91,.32],[784,1.24,1.0]].forEach(([f,s,d])=>{
+      const o=ac.createOscillator(), g=ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type='triangle'; o.frequency.value=f;
+      g.gain.setValueAtTime(.85,t+s);
+      g.gain.exponentialRampToValueAtTime(.001,t+s+d);
+      o.start(t+s); o.stop(t+s+d+.05);
+    });
+  },
+
+  // Game-show style buzzer
+  buzzer(ac) {
+    const t=ac.currentTime;
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type='sawtooth'; o.frequency.value=180;
+    g.gain.setValueAtTime(.9,t);
+    g.gain.setValueAtTime(.9,t+.85);
+    g.gain.exponentialRampToValueAtTime(.001,t+1.1);
+    o.start(t); o.stop(t+1.2);
+  },
+};
+
+function playSound(name) {
+  try {
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    SOUNDS[name]?.(ac);
+  } catch(e) {}
+}
+
+function playDone() {
+  if (!soundCheck.checked) return;
+  playSound(soundSelect.value);
+}
+
+document.getElementById('preview-sound').addEventListener('click', () => {
+  playSound(soundSelect.value);
+});
+
+function setInputsDisabled(disabled) {
+  document.querySelectorAll('.dbt').forEach(b => b.disabled = disabled);
+  digitTimer.classList.toggle('disabled', disabled);
+}
+
+startBtn.addEventListener('click', () => {
+  if (getPreciseRemaining() <= 0) return;
+  if (running) {
+    stopTimer(); // saves pausedElapsed
+    startBtn.textContent = '▶ Resume';
+    setInputsDisabled(false);
+  } else {
+    doneBanner.style.display = 'none';
+    startStamp = performance.now(); running = true;
+    setInputsDisabled(true);
+    startBtn.textContent = '⏸ Pause';
+  }
+});
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  running = false; startStamp = null; pausedElapsed = 0;
+  remaining = totalSeconds;
+  widgets.forEach(w => { w.state.drops = []; w.state.grains = []; });
+  doneBanner.style.display = 'none'; startBtn.textContent = '▶ Start';
+  setInputsDisabled(false);
+});
+
+doneBanner.addEventListener('click', () => doneBanner.style.display = 'none');
+
+// ── Background images ─────────────────────────────────────────────────────────
+const BACKGROUNDS = [
+  // Nature
+  { id:'photo-1506905925346-21bda4d32df4', name:'Alps',      cat:'nature' },
+  { id:'photo-1441974231531-c6227db76b6e', name:'Forest',    cat:'nature' },
+  { id:'photo-1447752875215-b2761acb3c5d', name:'Mountains', cat:'nature' },
+  { id:'photo-1470770841072-f978cf4d019e', name:'Lake',      cat:'nature' },
+  { id:'photo-1500534314209-a25ddb2bd429', name:'Coast',     cat:'nature' },
+  { id:'photo-1465146344425-f00d5f5c8f07', name:'Meadow',   cat:'nature' },
+  // Space
+  { id:'photo-1419242902214-272b3f66ee7a', name:'Starry',    cat:'space' },
+  { id:'photo-1534796636912-3b6b36f57f53', name:'Aurora',    cat:'space' },
+  { id:'photo-1462331940025-496dfbfc7564', name:'Galaxy',    cat:'space' },
+  { id:'photo-1543722530-d2c3201371e7',    name:'Nebula',    cat:'space' },
+  { id:'photo-1446776811953-b23d57bd21aa', name:'Earth',     cat:'space' },
+  // Abstract
+  { id:'photo-1557682250-33bd709cbe85',    name:'Purple',    cat:'abstract' },
+  { id:'photo-1579546929518-9e396f3cc809', name:'Flow',      cat:'abstract' },
+  { id:'photo-1618005182384-a83a8bd57fbe', name:'Liquid',    cat:'abstract' },
+  { id:'photo-1558618666-fcd25c85cd64',    name:'Colour',    cat:'abstract' },
+  // Calm
+  { id:'photo-1508739773434-c26b3d09e071', name:'Mist',      cat:'calm' },
+  { id:'photo-1501854140801-50d01698950b', name:'Aerial',    cat:'calm' },
+  { id:'photo-1504701954957-2010ec3bcec1', name:'Morning',   cat:'calm' },
+  { id:'photo-1559827260-dc66d52bef19',    name:'Horizon',   cat:'calm' },
+  { id:'photo-1490750967868-88df5691cc5e', name:'Fog',       cat:'calm' },
+  // Warm
+  { id:'photo-1568667256549-094ab04e9877', name:'Autumn',    cat:'warm' },
+  { id:'photo-1477519242566-6ae87c31d212', name:'Desert',    cat:'warm' },
+  { id:'photo-1507003211169-0a1dd7228f2d', name:'Sunset',    cat:'warm' },
+  { id:'photo-1482784160316-6eb046863ece', name:'Dunes',     cat:'warm' },
+];
+
+let currentBgId = null;
+
+function unsplashUrl(id, w, h) {
+  return `https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&q=80`;
+}
+
+function setBackground(id) {
+  currentBgId = id;
+  if (!id) {
+    board.style.backgroundImage = '';
+    board.style.backgroundSize  = '';
+    board.style.backgroundPosition = '';
+    document.body.classList.remove('has-bg');
+    document.getElementById('bg-btn').classList.remove('active');
+    localStorage.removeItem('bg');
+  } else {
+    board.style.backgroundImage    = `url(${unsplashUrl(id,1920,1080)})`;
+    board.style.backgroundSize     = 'cover';
+    board.style.backgroundPosition = 'center';
+    document.body.classList.add('has-bg');
+    document.getElementById('bg-btn').classList.add('active');
+    localStorage.setItem('bg', id);
+  }
+  // Update active thumbnail
+  document.querySelectorAll('.bg-thumb').forEach(t => {
+    t.classList.toggle('active', t.dataset.id === (id || 'none'));
+  });
+}
+
+function renderBgGrid(cat) {
+  const grid = document.getElementById('bg-grid');
+  grid.innerHTML = '';
+
+  // None tile
+  const none = document.createElement('div');
+  none.className = 'bg-thumb none-tile' + (currentBgId === null ? ' active' : '');
+  none.dataset.id = 'none';
+  none.textContent = '✕ None';
+  none.addEventListener('click', () => setBackground(null));
+  grid.appendChild(none);
+
+  const list = cat === 'all' ? BACKGROUNDS : BACKGROUNDS.filter(b => b.cat === cat);
+  list.forEach(bg => {
+    const tile = document.createElement('div');
+    tile.className = 'bg-thumb' + (currentBgId === bg.id ? ' active' : '');
+    tile.dataset.id = bg.id;
+    const img = document.createElement('img');
+    img.src = unsplashUrl(bg.id, 300, 168);
+    img.alt = bg.name;
+    img.loading = 'lazy';
+    tile.appendChild(img);
+    tile.addEventListener('click', () => setBackground(bg.id));
+    grid.appendChild(tile);
+  });
+}
+
+// Tabs
+document.querySelectorAll('.bg-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.bg-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    renderBgGrid(tab.dataset.cat);
+  });
+});
+
+// Open / close
+const bgOverlay = document.getElementById('bg-overlay');
+document.getElementById('bg-btn').addEventListener('click', () => {
+  bgOverlay.classList.toggle('open');
+  if (bgOverlay.classList.contains('open')) renderBgGrid('all');
+});
+document.getElementById('close-bg').addEventListener('click', () => bgOverlay.classList.remove('open'));
+
+// ── Widget opacity + invisible frames ─────────────────────────────────────────
+(function() {
+  const slider  = document.getElementById('widget-opacity');
+  const label   = document.getElementById('opacity-val');
+  const invisCb = document.getElementById('invisible-frames');
+
+  function applyOpacity(v) {
+    document.documentElement.style.setProperty('--widget-alpha', (v/100).toFixed(2));
+    label.textContent = v + '%';
+  }
+  function applyInvisible(on) {
+    document.body.classList.toggle('invisible-frames', on);
+    // Disable opacity slider when fully invisible
+    slider.disabled = on;
+    label.style.opacity = on ? '0.3' : '1';
+  }
+
+  const savedOp  = parseInt(localStorage.getItem('widget-opacity') ?? '82');
+  const savedInv = localStorage.getItem('invisible-frames') === 'true';
+  slider.value   = savedOp;
+  applyOpacity(savedOp);
+  invisCb.checked = savedInv;
+  applyInvisible(savedInv);
+
+  slider.addEventListener('input', () => {
+    applyOpacity(parseInt(slider.value));
+    localStorage.setItem('widget-opacity', slider.value);
+  });
+  invisCb.addEventListener('change', () => {
+    applyInvisible(invisCb.checked);
+    localStorage.setItem('invisible-frames', invisCb.checked);
+  });
+})();
+
+// Restore from localStorage
+function initBackground() {
+  const saved = localStorage.getItem('bg');
+  if (saved) setBackground(saved);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+updateDigits();
+initBackground();
+requestAnimationFrame(loop);
+requestAnimationFrame(() => {
+  createWidget('circle');
+  createWidget('blocks');
+});
+</script>
+</body>
+</html>
