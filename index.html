@@ -490,43 +490,49 @@
     /* ── First/Then widget ── */
     .ft-widget {
       display: flex; align-items: stretch;
-      height: 100%; padding: 10px; gap: 8px; position: relative;
+      height: 100%; padding: 8px; gap: 6px; position: relative;
     }
     .ft-widget.vertical { flex-direction: column; }
     .ft-panel {
       flex: 1; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; gap: 6px;
+      align-items: center; gap: 0;
       background: var(--s2); border: 1px solid var(--border);
-      border-radius: 14px; padding: 10px 8px; position: relative;
+      border-radius: 14px; padding: 8px; position: relative;
       transition: background 0.2s, border-color 0.2s;
-      min-width: 0;
+      min-width: 0; overflow: hidden;
     }
     .ft-panel.done { background: rgba(34,197,94,0.12); border-color: #22c55e55; }
     .ft-label {
-      font-size: 0.6rem; font-weight: 800; letter-spacing: 3px;
+      font-size: 0.58rem; font-weight: 800; letter-spacing: 3px;
       text-transform: uppercase; color: var(--sub); flex-shrink: 0;
+      margin-bottom: 5px;
     }
     .ft-panel.done .ft-label { color: #22c55e; }
+    /* Image fills all available height in the panel */
     .ft-img-btn {
-      font-size: clamp(1.8rem, 5vw, 3.5rem); cursor: pointer; line-height: 1;
+      flex: 1; cursor: pointer; min-height: 60px;
       background: var(--s3); border: 1px solid var(--border);
-      border-radius: 12px; padding: 6px 10px; flex-shrink: 0;
+      border-radius: 10px; width: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: clamp(2.5rem, 10vw, 5rem);
       transition: border-color 0.12s, transform 0.1s;
-      width: 100%; display: flex; align-items: center; justify-content: center;
     }
-    .ft-img-btn:hover { border-color: var(--accent); transform: scale(1.04); }
+    .ft-img-btn:hover { border-color: var(--accent); transform: scale(1.02); }
+    .ft-img-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; }
     .ft-text {
       background: none; border: none; border-bottom: 1px solid var(--border);
-      color: var(--text); font-size: 0.9rem; font-weight: 700;
-      text-align: center; width: 100%; outline: none; padding: 3px 0;
+      color: var(--text); font-size: 0.85rem; font-weight: 700;
+      text-align: center; width: 100%; outline: none; padding: 5px 0 3px;
+      flex-shrink: 0; margin-top: 5px;
     }
     .ft-text::placeholder { color: var(--sub); font-weight: 400; }
     .ft-text:focus { border-bottom-color: var(--accent); }
     .ft-done-btn {
       background: #22c55e22; border: 1px solid #22c55e55;
       color: #22c55e; border-radius: 999px;
-      padding: 4px 12px; font-size: 0.7rem; font-weight: 700;
+      padding: 4px 12px; font-size: 0.68rem; font-weight: 700;
       cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+      margin-top: 6px;
     }
     .ft-done-btn:hover { background: #22c55e44; }
     .ft-done-btn.undone { background: var(--s3); border-color: var(--border); color: var(--sub); }
@@ -537,9 +543,9 @@
     .ft-panel.done .ft-done-check { opacity: 1; }
     .ft-arrow {
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.4rem; color: var(--sub); flex-shrink: 0;
+      font-size: 1.1rem; color: var(--sub); flex-shrink: 0; padding: 0 2px;
     }
-    .ft-widget.vertical .ft-arrow { transform: rotate(90deg); }
+    .ft-widget.vertical .ft-arrow { padding: 2px 0; }
     .ft-layout-btn {
       position: absolute; top: 4px; right: 4px; z-index: 2;
       background: var(--s3); border: 1px solid var(--border);
@@ -613,15 +619,26 @@
       grid-column: 1/-1; text-align: center; color: var(--sub);
       font-size: 0.8rem; padding: 24px 0;
     }
-    .ft-lib-footer {
-      flex-shrink: 0; padding: 6px 14px;
+    .ft-lib-upload {
+      flex-shrink: 0; padding: 8px 12px;
       border-top: 1px solid var(--border);
-      font-size: 0.65rem; color: var(--sub);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .ft-upload-btn {
+      flex: 1; background: var(--s2); border: 1px dashed var(--border);
+      border-radius: 10px; padding: 8px 12px; cursor: pointer;
+      color: var(--sub); font-size: 0.78rem; font-weight: 600;
+      transition: border-color 0.12s, color 0.12s;
+      text-align: center;
+    }
+    .ft-upload-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .ft-lib-footer {
+      flex-shrink: 0; padding: 4px 14px 6px;
+      font-size: 0.6rem; color: var(--sub);
       text-align: center;
     }
     .ft-lib-footer a { color: var(--accent); text-decoration: none; }
     /* Panel image display */
-    .ft-img-btn img { width: 100%; max-height: 80px; object-fit: contain; border-radius: 6px; }
 
     /* ── Text widget ── */
     .text-widget {
@@ -1008,6 +1025,7 @@ function removeWidget(id) {
     w.card.remove();
     widgets = widgets.filter(x => x.id !== id);
     autoLayout(true);
+    setTimeout(saveLayout, 250);
   }, 110);
 }
 
@@ -1104,75 +1122,223 @@ overlay.addEventListener('click', e => { if (e.target === overlay) overlay.class
 
 document.querySelectorAll('.wt-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    createWidget(btn.dataset.type); // autoLayout handles positioning
+    createWidget(btn.dataset.type);
     overlay.classList.remove('open');
+    setTimeout(saveLayout, 400); // save after animation settles
   });
 });
 
 document.getElementById('layout-btn').addEventListener('click', () => autoLayout(true));
 
-// ── First/Then pictogram library — curated ARASAAC IDs (no API needed) ────────
-// Images load directly from ARASAAC's static CDN — no CORS issues with <img> tags
-const ARASAAC_IMG = id => `https://static.arasaac.org/pictograms/${id}/${id}_300.png`;
+// ── First/Then pictogram library ──────────────────────────────────────────────
+const ARASAAC_IMG    = id => `https://static.arasaac.org/pictograms/${id}/${id}_300.png`;
+const WORKER_URL     = 'https://damp-sound-0341.jimmymc89.workers.dev/';
+
+// Map user-typed terms → ARASAAC keywords the DB actually has
+const KEYWORD_MAP = {
+  // Physical spaces
+  gym:             'sport',
+  'pe class':      'physical education',
+  'physical ed':   'physical education',
+  recess:          'playground',
+  bathroom:        'toilet',
+  restroom:        'toilet',
+  'women bathroom':'toilet women',
+  'girl bathroom': 'toilet girl',
+  'boys bathroom': 'toilet boy',
+  'men bathroom':  'toilet man',
+  cafeteria:       'dining room',
+  lunch:           'eating',
+  dinner:          'eating',
+  meal:            'eating',
+  eat:             'eating',
+  food:            'eating',
+  // Daily routines
+  handwash:        'washing hands',
+  handwashing:     'washing hands',
+  'wash hands':    'washing hands',
+  hygiene:         'personal hygiene',
+  brush:           'brushing teeth',
+  'brush teeth':   'brushing teeth',
+  backpack:        'backpack',
+  homework:        'homework',
+  rest:            'relaxation',
+  break:           'break',
+  nap:             'sleep',
+  'rest time':     'relaxation',
+  // Subjects
+  art:             'draw',
+  drawing:         'draw',
+  painting:        'paint',
+  craft:           'draw',
+  math:            'mathematics',
+  maths:           'mathematics',
+  science:         'science',
+  reading:         'reading',
+  writing:         'writing',
+  music:           'music',
+  computer:        'computer',
+  library:         'library',
+  // Services/Therapy
+  speech:          'speech therapy',
+  slp:             'speech therapy',
+  'speech therapy':'speech therapy',
+  ot:              'occupational therapy',
+  'occupational':  'occupational therapy',
+  pt:              'physiotherapy',
+  'physical therapy':'physiotherapy',
+  counseling:      'psychologist',
+  counselor:       'psychologist',
+  nurse:           'nurse',
+  // Rewards/motivators
+  reward:          'prize',
+  prize:           'prize',
+  star:            'star',
+  'free time':     'free time',
+  play:            'playing',
+  game:            'game',
+  ipad:            'tablet',
+  tablet:          'tablet',
+  video:           'television',
+  movie:           'cinema',
+  snack:           'snack',
+  // Transport
+  bus:             'school bus',
+  'school bus':    'school bus',
+  car:             'car',
+  // Emotions
+  happy:           'happy',
+  sad:             'sad',
+  calm:            'relax',
+  angry:           'angry',
+  // Activities
+  transition:      'change',
+  'circle time':   'assembly',
+  'morning meeting':'assembly',
+  centers:         'activity',
+  'group work':    'group work',
+  'independent work':'work',
+  'work time':     'work',
+};
 
 // id, display name, category, extra search keywords
 const PICTO_LIBRARY = [
-  // Subjects
-  {id:23394, n:'Reading',           c:'subjects',   k:'read book'},
-  {id:8565,  n:'Writing',           c:'subjects',   k:'write pencil'},
-  {id:10260, n:'Mathematics',       c:'subjects',   k:'math maths numbers'},
-  {id:32542, n:'Science',           c:'subjects',   k:''},
-  {id:24791, n:'Music',             c:'subjects',   k:'song singing'},
-  {id:2910,  n:'Computer',          c:'subjects',   k:'technology tablet ipad screen'},
-  {id:6073,  n:'Library',           c:'subjects',   k:'books'},
-  {id:3082,  n:'School',            c:'subjects',   k:'classroom'},
-  // Activities
-  {id:37196, n:'Physical Education',c:'activities', k:'gym pe exercise sport recess playground run'},
-  {id:37843, n:'Snack',             c:'activities', k:'food eat lunch dinner meal breakfast snack'},
-  {id:38086, n:'Bus',               c:'activities', k:'transportation ride home'},
-  {id:6929,  n:'Bathroom',          c:'activities', k:'toilet restroom'},
-  {id:37038, n:'Work Time',         c:'activities', k:'work study desk'},
-  {id:36257, n:'Group Reading',     c:'activities', k:'read circle time'},
-  {id:4631,  n:'Morning Meeting',   c:'activities', k:'circle time morning assembly'},
-  {id:5455,  n:'Finished',          c:'activities', k:'done complete end'},
-  // Services
-  {id:6142,  n:'Speech Therapy',    c:'services',   k:'speech language talking communication'},
-  {id:6222,  n:'Communication',     c:'services',   k:'aac board talk'},
-  // Rewards
-  {id:5596,  n:'All Done',          c:'rewards',    k:'finished complete free time break reward'},
-  {id:5455,  n:'Free Time',         c:'rewards',    k:'play choice break fun reward'},
+  // ── Subjects ──
+  {id:23394, n:'Reading',              c:'subjects',   k:'read book literacy'},
+  {id:8565,  n:'Writing',              c:'subjects',   k:'write pencil journal'},
+  {id:10260, n:'Mathematics',          c:'subjects',   k:'math maths numbers counting'},
+  {id:32542, n:'Science',              c:'subjects',   k:'experiment lab stem'},
+  {id:24791, n:'Music',                c:'subjects',   k:'song singing instruments band choir'},
+  {id:8088,  n:'Art / Drawing',        c:'subjects',   k:'art draw painting craft create'},
+  {id:36139, n:'Art Class',            c:'subjects',   k:'art canvas painting craft studio'},
+  {id:2910,  n:'Computer',             c:'subjects',   k:'technology screen device coding'},
+  {id:6073,  n:'Library',              c:'subjects',   k:'books reading research'},
+  {id:3082,  n:'School',               c:'subjects',   k:'classroom building'},
+  {id:31437, n:'Dance',                c:'subjects',   k:'movement dance drama performing arts'},
+  {id:24797, n:'Film / Media',         c:'subjects',   k:'film movie video media arts'},
+  {id:34705, n:'Instructions',         c:'subjects',   k:'directions follow steps listen'},
+
+  // ── Activities ──
+  {id:37196, n:'Physical Education',   c:'activities', k:'gym pe exercise sport recess playground run fitness'},
+  {id:37843, n:'Snack',                c:'activities', k:'food eat snack morning break'},
+  {id:38477, n:'Lunch / Cafeteria',    c:'activities', k:'lunch eat meal food dinner cafeteria'},
+  {id:38086, n:'Bus',                  c:'activities', k:'transportation ride school bus home'},
+  {id:6929,  n:'Bathroom',             c:'activities', k:'toilet restroom break'},
+  {id:37038, n:'Work Time',            c:'activities', k:'work study desk independent seat'},
+  {id:36257, n:'Group Reading',        c:'activities', k:'read circle time together group'},
+  {id:35990, n:'Circle Time',          c:'activities', k:'morning meeting circle assembly sitting carpet'},
+  {id:6170,  n:'Game',                 c:'activities', k:'play fun choice free time'},
+  {id:9810,  n:'Game Time',            c:'activities', k:'play games fun free choice recess'},
+  {id:29151, n:'iPad / Tablet',        c:'activities', k:'ipad tablet computer technology screen'},
+  {id:37360, n:'Transition',           c:'activities', k:'change move go next switch'},
+  {id:2432,  n:'Go',                   c:'activities', k:'transition move walk leave'},
+  {id:5455,  n:'Finished',             c:'activities', k:'done complete end all done stop'},
+  {id:2369,  n:'Rest Time',            c:'activities', k:'sleep rest relax quiet break nap'},
+  {id:2317,  n:'Home',                 c:'activities', k:'house home go home dismissal after school'},
+  {id:2549,  n:'Watch / Observe',      c:'activities', k:'watch look see television video'},
+  {id:31437, n:'Dance Break',          c:'activities', k:'dance movement brain break'},
+  {id:39677, n:'Welcome',              c:'activities', k:'welcome greeting arrival morning'},
+  {id:39430, n:'Show / Present',       c:'activities', k:'show present share assembly performance'},
+
+  // ── Services ──
+  {id:6142,  n:'Speech Therapy',       c:'services',   k:'speech language talking slp therapy'},
+  {id:6222,  n:'Communication',        c:'services',   k:'aac board talk communicate language'},
+  {id:22791, n:'Occupational Therapy', c:'services',   k:'ot occupational therapy fine motor'},
+  {id:37196, n:'Physical Therapy',     c:'services',   k:'pt physical therapy gross motor exercise'},
+  {id:6929,  n:'Nurse / Health',       c:'services',   k:'nurse health medical doctor sick'},
+  {id:32542, n:'Counseling',           c:'services',   k:'counselor psychologist emotions feelings support'},
+  {id:3082,  n:'Resource Room',        c:'services',   k:'resource special education support pull out'},
+  {id:34705, n:'Testing / Assessment', c:'services',   k:'test assessment evaluation evaluation'},
+
+  // ── Emotions ──
+  {id:2752,  n:'Happy / Great',        c:'emotions',   k:'happy great good excited proud joy'},
+  {id:4629,  n:'Hard / Frustrated',    c:'emotions',   k:'hard frustrated difficult angry upset'},
+  {id:2369,  n:'Tired',                c:'emotions',   k:'tired sleepy exhausted'},
+  {id:5596,  n:'Done / Calm',          c:'emotions',   k:'calm done okay fine neutral'},
+  {id:39677, n:'Excited / Ready',      c:'emotions',   k:'excited happy ready go motivated'},
+
+  // ── Rewards ──
+  {id:2752,  n:'Star / Reward',        c:'rewards',    k:'star prize reward good job incentive sticker'},
+  {id:5596,  n:'All Done',             c:'rewards',    k:'finished complete done reward'},
+  {id:6170,  n:'Free Play',            c:'rewards',    k:'play choice break fun free time reward'},
+  {id:9810,  n:'Games',                c:'rewards',    k:'play fun game choice board game'},
+  {id:29151, n:'Tablet Time',          c:'rewards',    k:'ipad tablet tech screen reward'},
+  {id:38477, n:'Lunch / Special Snack',c:'rewards',    k:'eat food snack treat reward'},
+  {id:24797, n:'Movie / Video',        c:'rewards',    k:'movie film video youtube reward screen'},
+  {id:31437, n:'Dance Party',          c:'rewards',    k:'dance movement brain break reward fun'},
+  {id:2317,  n:'Go Home',              c:'rewards',    k:'home house dismissal early release reward'},
+  {id:2369,  n:'Rest / Break',         c:'rewards',    k:'rest break relax sleep quiet time reward'},
+  {id:8088,  n:'Free Draw / Art',      c:'rewards',    k:'draw art paint color create free reward'},
+  {id:37196, n:'Outside Time',         c:'rewards',    k:'outside recess play run reward gross motor'},
+
+  // ── Routines ──
+  {id:37843, n:'Morning Snack',        c:'routines',   k:'snack eat morning food'},
+  {id:38086, n:'Ride the Bus',         c:'routines',   k:'bus home ride school morning afternoon dismissal'},
+  {id:6929,  n:'Bathroom Break',       c:'routines',   k:'toilet restroom bathroom wash'},
+  {id:22791, n:'Wash Hands',           c:'routines',   k:'handwashing clean hygiene soap'},
+  {id:4631,  n:'Morning Arrival',      c:'routines',   k:'morning school start arrival unpack'},
+  {id:37360, n:'Pack Up',              c:'routines',   k:'backpack bag go home transition end dismissal'},
+  {id:5455,  n:'Finished',             c:'routines',   k:'done complete end finished all done'},
+  {id:2369,  n:'Rest / Quiet Time',    c:'routines',   k:'rest quiet nap sleep relax'},
+  {id:2317,  n:'Go Home',              c:'routines',   k:'home house bus dismissal after school'},
+  {id:2432,  n:'Walk / Line Up',       c:'routines',   k:'walk line up transition hallway go move'},
+  {id:39677, n:'Morning Greeting',     c:'routines',   k:'welcome greeting morning meeting hello'},
+  {id:35990, n:'Sit / Carpet Time',    c:'routines',   k:'sit carpet circle floor assembly'},
+  {id:34705, n:'Follow Directions',    c:'routines',   k:'instructions directions listen follow steps'},
 ];
 
-// Search filters the local library; also tries live API in background
-async function fetchPictograms(query) {
-  const q = query.toLowerCase();
-  // 1. Search local curated set first
-  const local = PICTO_LIBRARY.filter(p =>
-    p.n.toLowerCase().includes(q) || p.c.toLowerCase().includes(q)
-  ).map(p => ({ name: p.n, alt_url: ARASAAC_IMG(p.id), _local: true }));
-
-  // 2. Try live API for richer results
+// Resolve keyword → ARASAAC-friendly term, then fetch via Worker proxy
+async function fetchViaWorker(rawQuery) {
+  const mapped = KEYWORD_MAP[rawQuery.toLowerCase()] || rawQuery;
   try {
-    const url = `https://symbotalkapiv1.azurewebsites.net/search/?name=${encodeURIComponent(query)}&lang=en&repo=arasaac&limit=28`;
-    const res  = await fetch(url, { signal: AbortSignal.timeout(4000) });
-    if (res.ok) {
-      const remote = await res.json();
-      if (Array.isArray(remote) && remote.length) return remote;
+    const res = await fetch(`${WORKER_URL}?q=${encodeURIComponent(mapped)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    // ARASAAC returns array of {_id, keywords:[{keyword}]}; normalise to {name, alt_url}
+    if (Array.isArray(data) && data.length) {
+      return data.map(p => ({
+        name:    p.keywords?.[0]?.keyword || mapped,
+        alt_url: ARASAAC_IMG(p._id),
+      }));
     }
   } catch {}
-
-  // Return local results if API failed
-  return local.length ? local : null;
+  return null;
 }
 
-// Default search term per category tab
+// Search filters the local library, then fetches full results via Worker in background
+async function fetchPictograms(query) {
+  return null; // placeholder — loadFtPictograms handles everything
+}
+
+// Default search term per category tab (mapped to real ARASAAC keywords)
 const FT_CAT_TERMS = {
   all:        'all',
-  subjects:   'subjects',
-  activities: 'activities',
-  services:   'services',
-  rewards:    'rewards',
-  routines:   'routines',
+  subjects:   'school',
+  activities: 'activity',
+  services:   'therapy',
+  emotions:   'emotions',
+  rewards:    'prize',
+  routines:   'routine',
 };
 
 let ftLibTarget = null;
@@ -1199,10 +1365,15 @@ function openFtLibrary(btn) {
           <button class="ft-lib-tab" data-cat="subjects">Subjects</button>
           <button class="ft-lib-tab" data-cat="activities">Activities</button>
           <button class="ft-lib-tab" data-cat="services">Services</button>
+          <button class="ft-lib-tab" data-cat="emotions">Emotions</button>
           <button class="ft-lib-tab" data-cat="rewards">Rewards</button>
           <button class="ft-lib-tab" data-cat="routines">Routines</button>
         </div>
         <div class="ft-lib-grid" id="ft-lib-grid"></div>
+        <div class="ft-lib-upload">
+          <button class="ft-upload-btn" id="ft-upload-btn">📁 Use your own image or photo</button>
+          <input type="file" id="ft-file-input" accept="image/*" style="display:none" />
+        </div>
         <div class="ft-lib-footer">
           Symbols by <a href="https://arasaac.org" target="_blank">ARASAAC</a>
           (Sergio Palao / CC BY-NC-SA) via <a href="https://github.com/elelad/SymboTalkAPI" target="_blank">SymboTalk</a>
@@ -1212,6 +1383,26 @@ function openFtLibrary(btn) {
 
     ov.querySelector('.ft-lib-close-btn').addEventListener('click', closeFtLib);
     ov.addEventListener('click', e => { if (e.target === ov) closeFtLib(); });
+
+    // Upload your own image
+    const uploadBtn  = ov.querySelector('#ft-upload-btn');
+    const fileInput  = ov.querySelector('#ft-file-input');
+    uploadBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = e => {
+        if (ftLibTarget) {
+          ftLibTarget.innerHTML = `<img src="${e.target.result}" alt="${file.name}" />`;
+          const inp = ftLibTarget.closest('.ft-panel').querySelector('.ft-text');
+          if (inp && !inp.value) inp.value = file.name.replace(/\.[^.]+$/, '');
+        }
+        closeFtLib();
+        fileInput.value = '';
+      };
+      reader.readAsDataURL(file);
+    });
 
     // Category tabs
     ov.querySelectorAll('.ft-lib-tab').forEach(t => t.addEventListener('click', () => {
@@ -1289,16 +1480,28 @@ async function loadFtPictograms(query) {
   showItems(local);
   if (!isAll) grid.insertAdjacentHTML('afterbegin', `<div class="ft-lib-status" style="grid-column:1/-1;font-size:.65rem;padding:4px 0;opacity:.5">${matched.length ? matched.length+' local results' : 'No exact match — showing all. Searching online…'}</div>`);
 
-  // Try live API in background
-  try {
-    const apiQuery = isAll ? 'school' : query;
-    const url = `https://symbotalkapiv1.azurewebsites.net/search/?name=${encodeURIComponent(apiQuery)}&lang=en&repo=arasaac&limit=32`;
-    const res  = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (res.ok) {
-      const remote = await res.json();
-      if (Array.isArray(remote) && remote.length) showItems(remote);
-    }
-  } catch {}
+  // Fetch via Worker — "All" tab loads multiple categories in parallel for rich grid
+  let remote;
+  if (isAll) {
+    const terms = ['school','routine','activity','therapy','reward','toilet','eating','playing','emotions','prize'];
+    const batches = await Promise.all(terms.map(t => fetchViaWorker(t)));
+    const seen = new Set();
+    remote = batches.flat().filter(p => {
+      if (!p || !p.alt_url || seen.has(p.alt_url)) return false;
+      seen.add(p.alt_url); return true;
+    }).slice(0, 64);
+    if (!remote.length) remote = null;
+  } else {
+    remote = await fetchViaWorker(query);
+  }
+  if (remote && remote.length) {
+    showItems(remote);
+  } else {
+    // Worker returned nothing — keep local results, show hint
+    showItems(local);
+    if (!matched.length) grid.insertAdjacentHTML('afterbegin',
+      `<div class="ft-lib-status" style="grid-column:1/-1;font-size:.6rem;padding:2px 0;opacity:.4">Try different search term</div>`);
+  }
 }
 
 // ── DOM widget: First / Then ──────────────────────────────────────────────────
@@ -1603,50 +1806,134 @@ function drawClock(ctx, W, H, pct, col) {
 
 // ── Render: Liquid ────────────────────────────────────────────────────────────
 function drawLiquid(ctx, W, H, pct, col, state) {
-  const cw=Math.min(130,W*.68), ch=H-30, cx=W/2;
-  const x0=cx-cw/2, y0=15, pad=8;
-  const ix=x0+pad, iw=cw-pad*2, iy=y0+pad, ih=ch-pad*2;
-  const maxP=ih*.38, elapsed=1-pct;
+  const cw = Math.max(60, W * 0.80);
+  const ch = H - 20;
+  const cx = W / 2;
+  const x0 = cx - cw/2, y0 = 10, pad = 8;
+  const ix = x0+pad, iw = cw-pad*2, iy = y0+pad, ih = ch-pad*2;
+  const elapsed = 1 - pct;
 
-  rrect(ctx,x0,y0,cw,ch,18); ctx.fillStyle='rgba(255,255,255,.04)'; ctx.fill();
-  ctx.save(); rrect(ctx,ix,iy,iw,ih,12); ctx.clip();
+  // Smaller pools → more room for the zig-zag section
+  const maxPool = ih * 0.16;
+  const topH    = pct * maxPool;
+  const botH    = elapsed * maxPool;
+  const botSurfY = iy + ih - botH;
 
-  const topH=pct*maxP;
-  if (topH>1) {
-    rrect(ctx,ix,iy,iw,topH,12); ctx.fillStyle=col+'c0'; ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.18)'; ctx.fillRect(ix,iy+topH-3,iw,3);
-  }
-  const botH=elapsed*maxP;
-  if (botH>1) {
-    rrect(ctx,ix,iy+ih-botH,iw,botH,12); ctx.fillStyle=col+'c0'; ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.12)'; ctx.fillRect(ix,iy+ih-botH,iw,3);
-  }
+  // ── 4 angled baffles creating the zig-zag path ──────────────────────────────
+  // Even shelves: gap on RIGHT (drops slide left→right, fall off right edge)
+  // Odd shelves:  gap on LEFT  (drops slide right→left, fall off left edge)
+  const gapW  = iw * 0.24;   // open gap at one end
+  const slope = iw * 0.07;   // height drop across the shelf
+  const fracs = [0.22, 0.40, 0.58, 0.76]; // vertical positions as fraction of ih
 
-  const now=performance.now();
-  const bsy=iy+ih-botH-6;
-  if (running && pct>.02 && pct<.98 && now-state.lastSpawn>300+pct*800) {
-    state.lastSpawn=now;
-    const r=5+Math.random()*8;
-    state.drops.push({x:ix+iw/2+(Math.random()-.5)*iw*.3,y:iy+topH+r,vy:.4+Math.random()*.3,r,wp:Math.random()*Math.PI*2,wsp:.04+Math.random()*.03});
-  }
-  state.drops=state.drops.filter(d=>{
-    d.vy=Math.min(d.vy+.12,6); d.y+=d.vy; d.wp+=d.wsp;
-    const bsy2=iy+ih-(1-(totalSeconds>0?remaining/totalSeconds:0))*maxP-8;
-    if(d.y+d.r>=bsy2) return false;
-    const dx=d.x+Math.sin(d.wp)*5;
-    ctx.beginPath(); ctx.ellipse(dx,d.y,d.r*.68,d.r,0,0,Math.PI*2);
-    ctx.fillStyle=col+'d0'; ctx.fill();
-    ctx.beginPath(); ctx.ellipse(dx-d.r*.22,d.y-d.r*.28,d.r*.22,d.r*.28,-.4,0,Math.PI*2);
-    ctx.fillStyle='rgba(255,255,255,.28)'; ctx.fill();
-    return true;
+  const SHELVES = fracs.map((f, i) => {
+    const my = iy + f * ih;
+    if (i % 2 === 0) {
+      // Gap on right → shelf from left wall to (right − gap), angled down-right
+      return { x1: ix+4, y1: my, x2: ix+iw-gapW, y2: my+slope, dir: 1 };
+    } else {
+      // Gap on left → shelf from (left + gap) to right wall, angled down-left
+      return { x1: ix+gapW, y1: my+slope, x2: ix+iw-4, y2: my, dir: -1 };
+    }
   });
+
+  // ── Glass background ─────────────────────────────────────────────────────────
+  rrect(ctx,x0,y0,cw,ch,20);
+  ctx.fillStyle='rgba(255,255,255,.04)'; ctx.fill();
+
+  ctx.save();
+  rrect(ctx,ix,iy,iw,ih,14); ctx.clip();
+
+  // Draw baffles
+  SHELVES.forEach(s => {
+    ctx.lineWidth=7; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);
+    ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.stroke();
+    ctx.lineWidth=4;
+    ctx.strokeStyle=col+'55'; ctx.stroke();
+  });
+
+  // Spawn drops from bottom of top pool
+  const now = performance.now();
+  const spawnGap = running ? Math.max(350, 1200 * pct) : 99999;
+  if (pct > 0.01 && pct < 0.99 && now - state.lastSpawn > spawnGap) {
+    state.lastSpawn = now;
+    const r = 7 + Math.random() * 8;
+    state.drops.push({
+      x: ix + iw/2 + (Math.random()-.5)*iw*.15,
+      y: iy + topH + r + 2,
+      vx: 0, vy: 0.6, r,
+      phase: 'fall', // 'fall' | 'slide'
+      si: 0, // next shelf index to target
+    });
+  }
+
+  // Update and draw drops
+  state.drops = state.drops.filter(d => {
+    if (d.phase === 'fall') {
+      d.vy = Math.min(d.vy + 0.20, 8);
+      d.y += d.vy;
+
+      // Check shelves from current target onward
+      for (let i = d.si; i < SHELVES.length; i++) {
+        const s = SHELVES[i];
+        const t = (d.x - s.x1) / (s.x2 - s.x1);
+        if (t >= 0 && t <= 1) {
+          const sy = s.y1 + (s.y2 - s.y1) * t;
+          if (d.y + d.r >= sy) {
+            // Land on baffle
+            d.y = sy - d.r;
+            d.vy = 0;
+            d.vx = s.dir * (2.5 + Math.random() * 1.5);
+            d.phase = 'slide';
+            d.si = i;
+            break;
+          }
+        }
+      }
+      if (d.y + d.r >= botSurfY) return false;
+
+    } else if (d.phase === 'slide') {
+      const s = SHELVES[d.si];
+      d.x += d.vx;
+      // Follow slope
+      const t = Math.max(0, Math.min(1, (d.x - s.x1)/(s.x2 - s.x1)));
+      d.y = s.y1 + (s.y2 - s.y1) * t - d.r;
+      // Reached open edge → fall off
+      const done = s.dir > 0 ? d.x >= s.x2 : d.x <= s.x1;
+      if (done) {
+        d.phase = 'fall'; d.vy = 0.5; d.vx = 0; d.si++;
+      }
+    }
+
+    // Draw drop (ellipse + highlight)
+    ctx.beginPath();
+    ctx.ellipse(d.x, d.y, d.r*.68, d.r, 0, 0, Math.PI*2);
+    ctx.fillStyle = col+'e0'; ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(d.x-d.r*.2, d.y-d.r*.26, d.r*.22, d.r*.28, -.3, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,.38)'; ctx.fill();
+    return d.y < botSurfY + 10;
+  });
+
+  // Draw pools ON TOP of drops so drops emerge/sink naturally
+  if (topH > 1) {
+    rrect(ctx,ix,iy,iw,topH,14); ctx.fillStyle=col+'cc'; ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.22)'; ctx.fillRect(ix+2,iy+topH-3,iw-4,3);
+  }
+  if (botH > 1) {
+    rrect(ctx,ix,botSurfY,iw,botH,14); ctx.fillStyle=col+'cc'; ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.15)'; ctx.fillRect(ix+2,botSurfY,iw-4,3);
+  }
+
   ctx.restore();
 
-  rrect(ctx,x0,y0,cw,ch,18);
-  ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.lineWidth=2.5; ctx.stroke();
-  ctx.save(); rrect(ctx,x0,y0,cw,ch,18); ctx.clip();
-  ctx.beginPath(); ctx.moveTo(cx-cw/2+9,y0+12); ctx.lineTo(cx-8,iy+ih/2);
-  ctx.strokeStyle='rgba(255,255,255,.1)'; ctx.lineWidth=4; ctx.lineCap='round'; ctx.stroke();
+  // Glass outline + left edge shimmer
+  rrect(ctx,x0,y0,cw,ch,20);
+  ctx.strokeStyle='rgba(255,255,255,.20)'; ctx.lineWidth=2; ctx.stroke();
+  ctx.save(); rrect(ctx,x0,y0,cw,ch,20); ctx.clip();
+  ctx.beginPath(); ctx.moveTo(x0+10,y0+16); ctx.lineTo(x0+10,y0+ch-16);
+  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.stroke();
   ctx.restore();
 }
 
@@ -2028,13 +2315,65 @@ function initBackground() {
   if (saved) setBackground(saved);
 }
 
+// ── Layout persistence ────────────────────────────────────────────────────────
+const LAYOUT_VERSION = 3; // bump to force reset to default on next load
+
+function saveLayout() {
+  const state = {
+    v:       LAYOUT_VERSION,
+    widgets: widgets.map(w => ({
+      type: w.type,
+      left: w.card.style.left,
+      top:  w.card.style.top,
+      w:    w.card.style.width,
+      h:    w.card.style.height,
+    })),
+  };
+  localStorage.setItem('layout', JSON.stringify(state));
+}
+
+function restoreLayout() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('layout') || 'null');
+    // If no saved state, or version mismatch → use clean default
+    if (!saved || saved.v !== LAYOUT_VERSION) {
+      localStorage.removeItem('layout');
+      localStorage.removeItem('bg');          // also clear background
+      localStorage.removeItem('invisible-frames');
+      return false;
+    }
+    if (!Array.isArray(saved.widgets) || !saved.widgets.length) return false;
+    saved.widgets.forEach(s => {
+      const widget = createWidget(s.type);
+      widget.card.style.left   = s.left;
+      widget.card.style.top    = s.top;
+      widget.card.style.width  = s.w;
+      widget.card.style.height = s.h;
+    });
+    return true;
+  } catch { return false; }
+}
+
+// Save layout whenever a widget is moved or resized (debounced)
+let saveTimer = null;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveLayout, 600);
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 updateDigits();
 initBackground();
 requestAnimationFrame(loop);
 requestAnimationFrame(() => {
-  createWidget('circle');
-  createWidget('blocks');
+  // Try to restore saved layout; fall back to default circle + blocks
+  if (!restoreLayout()) {
+    createWidget('circle');
+    createWidget('blocks');
+  }
+  // Listen for any position/size changes and save
+  document.addEventListener('mouseup',  scheduleSave);
+  document.addEventListener('touchend', scheduleSave);
 });
 </script>
 </body>
