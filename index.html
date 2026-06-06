@@ -4,6 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Online Visual Timer | onlinevisualtimer.com</title>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-RM3TKYWBZK"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-RM3TKYWBZK');
+  </script>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='16' fill='%230b1120'/><circle cx='16' cy='16' r='10' fill='none' stroke='%231a2844' stroke-width='4'/><circle cx='16' cy='16' r='10' fill='none' stroke='%2322c55e' stroke-width='4.5' stroke-dasharray='47 16' stroke-dashoffset='16' stroke-linecap='round'/></svg>" />
   <meta name="description" content="Free visual timer widgets for classrooms, focus sessions, ADHD, and more." />
   <style>
@@ -1103,29 +1111,68 @@ document.querySelectorAll('.wt-btn').forEach(btn => {
 
 document.getElementById('layout-btn').addEventListener('click', () => autoLayout(true));
 
-// ── First/Then library — powered by ARASAAC ───────────────────────────────────
+// ── First/Then pictogram library — curated ARASAAC IDs (no API needed) ────────
+// Images load directly from ARASAAC's static CDN — no CORS issues with <img> tags
 const ARASAAC_IMG = id => `https://static.arasaac.org/pictograms/${id}/${id}_300.png`;
 
-async function fetchArasaac(query) {
-  const base   = `https://api.arasaac.org/v1/pictograms/search/en/${encodeURIComponent(query)}`;
-  const proxy  = `https://corsproxy.io/?${encodeURIComponent(base)}`;
-  for (const url of [base, proxy]) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) return await res.json();
-    } catch {}
-  }
-  return null;
+// id, display name, category, extra search keywords
+const PICTO_LIBRARY = [
+  // Subjects
+  {id:23394, n:'Reading',           c:'subjects',   k:'read book'},
+  {id:8565,  n:'Writing',           c:'subjects',   k:'write pencil'},
+  {id:10260, n:'Mathematics',       c:'subjects',   k:'math maths numbers'},
+  {id:32542, n:'Science',           c:'subjects',   k:''},
+  {id:24791, n:'Music',             c:'subjects',   k:'song singing'},
+  {id:2910,  n:'Computer',          c:'subjects',   k:'technology tablet ipad screen'},
+  {id:6073,  n:'Library',           c:'subjects',   k:'books'},
+  {id:3082,  n:'School',            c:'subjects',   k:'classroom'},
+  // Activities
+  {id:37196, n:'Physical Education',c:'activities', k:'gym pe exercise sport recess playground run'},
+  {id:37843, n:'Snack',             c:'activities', k:'food eat lunch dinner meal breakfast snack'},
+  {id:38086, n:'Bus',               c:'activities', k:'transportation ride home'},
+  {id:6929,  n:'Bathroom',          c:'activities', k:'toilet restroom'},
+  {id:37038, n:'Work Time',         c:'activities', k:'work study desk'},
+  {id:36257, n:'Group Reading',     c:'activities', k:'read circle time'},
+  {id:4631,  n:'Morning Meeting',   c:'activities', k:'circle time morning assembly'},
+  {id:5455,  n:'Finished',          c:'activities', k:'done complete end'},
+  // Services
+  {id:6142,  n:'Speech Therapy',    c:'services',   k:'speech language talking communication'},
+  {id:6222,  n:'Communication',     c:'services',   k:'aac board talk'},
+  // Rewards
+  {id:5596,  n:'All Done',          c:'rewards',    k:'finished complete free time break reward'},
+  {id:5455,  n:'Free Time',         c:'rewards',    k:'play choice break fun reward'},
+];
+
+// Search filters the local library; also tries live API in background
+async function fetchPictograms(query) {
+  const q = query.toLowerCase();
+  // 1. Search local curated set first
+  const local = PICTO_LIBRARY.filter(p =>
+    p.n.toLowerCase().includes(q) || p.c.toLowerCase().includes(q)
+  ).map(p => ({ name: p.n, alt_url: ARASAAC_IMG(p.id), _local: true }));
+
+  // 2. Try live API for richer results
+  try {
+    const url = `https://symbotalkapiv1.azurewebsites.net/search/?name=${encodeURIComponent(query)}&lang=en&repo=arasaac&limit=28`;
+    const res  = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    if (res.ok) {
+      const remote = await res.json();
+      if (Array.isArray(remote) && remote.length) return remote;
+    }
+  } catch {}
+
+  // Return local results if API failed
+  return local.length ? local : null;
 }
 
 // Default search term per category tab
 const FT_CAT_TERMS = {
-  all:        'school',
-  subjects:   'classroom subject',
-  activities: 'activity school',
-  services:   'therapy',
-  rewards:    'reward fun',
-  routines:   'routine daily',
+  all:        'all',
+  subjects:   'subjects',
+  activities: 'activities',
+  services:   'services',
+  rewards:    'rewards',
+  routines:   'routines',
 };
 
 let ftLibTarget = null;
@@ -1157,8 +1204,8 @@ function openFtLibrary(btn) {
         </div>
         <div class="ft-lib-grid" id="ft-lib-grid"></div>
         <div class="ft-lib-footer">
-          Pictograms by <a href="https://arasaac.org" target="_blank">ARASAAC</a>
-          — Aragonese Government &amp; University of Zaragoza (CC BY-NC-SA 4.0)
+          Symbols by <a href="https://arasaac.org" target="_blank">ARASAAC</a>
+          (Sergio Palao / CC BY-NC-SA) via <a href="https://github.com/elelad/SymboTalkAPI" target="_blank">SymboTalk</a>
         </div>
       </div>`;
     document.body.appendChild(ov);
@@ -1200,33 +1247,58 @@ function closeFtLib() {
 async function loadFtPictograms(query) {
   const grid = document.getElementById('ft-lib-grid');
   if (!grid) return;
-  grid.innerHTML = '<div class="ft-lib-status">Loading pictograms…</div>';
-  const data = await fetchArasaac(query);
-  if (!data) {
-    grid.innerHTML = '<div class="ft-lib-status">Couldn\'t reach the pictogram library.<br>Works fully when deployed — try again online.</div>';
-    return;
-  }
-  const items = data.slice(0, 40);
-  grid.innerHTML = '';
-  if (!items.length) {
-    grid.innerHTML = '<div class="ft-lib-status">No results — try a different search term.</div>';
-    return;
-  }
-  items.forEach(pic => {
-    const keyword = pic.keywords?.[0]?.keyword || query;
-    const card = document.createElement('button');
-    card.className = 'ft-lib-card';
-    card.innerHTML = `<img src="${ARASAAC_IMG(pic._id)}" alt="${keyword}" loading="lazy" /><span class="ft-lib-lbl">${keyword}</span>`;
-    card.addEventListener('click', () => {
-      if (ftLibTarget) {
-        ftLibTarget.innerHTML = `<img src="${ARASAAC_IMG(pic._id)}" alt="${keyword}" />`;
-        const inp = ftLibTarget.closest('.ft-panel').querySelector('.ft-text');
-        if (inp) inp.value = keyword;
-      }
-      closeFtLib();
+
+  // Show local results immediately, then update with API results if they arrive
+  const showItems = items => {
+    grid.innerHTML = '';
+    if (!items || !items.length) {
+      grid.innerHTML = '<div class="ft-lib-status">No results — try a different search term.</div>';
+      return;
+    }
+    items.forEach(pic => {
+      const name   = pic.name || query;
+      const imgUrl = pic.alt_url || pic.image_url || '';
+      if (!imgUrl) return;
+      const card = document.createElement('button');
+      card.className = 'ft-lib-card';
+      card.innerHTML = `<img src="${imgUrl}" alt="${name}" loading="lazy" /><span class="ft-lib-lbl">${name}</span>`;
+      card.addEventListener('click', () => {
+        if (ftLibTarget) {
+          ftLibTarget.innerHTML = `<img src="${imgUrl}" alt="${name}" />`;
+          const inp = ftLibTarget.closest('.ft-panel').querySelector('.ft-text');
+          if (inp) inp.value = name;
+        }
+        closeFtLib();
+      });
+      grid.appendChild(card);
     });
-    grid.appendChild(card);
-  });
+  };
+
+  // Instant local results — search name, category, and keyword list
+  const q = query.toLowerCase();
+  const isAll = q === 'all';
+  const matched = isAll ? PICTO_LIBRARY : PICTO_LIBRARY.filter(p =>
+    p.n.toLowerCase().includes(q) ||
+    p.c === q ||
+    (p.k || '').toLowerCase().includes(q)
+  );
+  // Always show something — fall back to full library if no match
+  const local = (matched.length ? matched : PICTO_LIBRARY)
+    .map(p => ({ name: p.n, alt_url: ARASAAC_IMG(p.id) }));
+
+  showItems(local);
+  if (!isAll) grid.insertAdjacentHTML('afterbegin', `<div class="ft-lib-status" style="grid-column:1/-1;font-size:.65rem;padding:4px 0;opacity:.5">${matched.length ? matched.length+' local results' : 'No exact match — showing all. Searching online…'}</div>`);
+
+  // Try live API in background
+  try {
+    const apiQuery = isAll ? 'school' : query;
+    const url = `https://symbotalkapiv1.azurewebsites.net/search/?name=${encodeURIComponent(apiQuery)}&lang=en&repo=arasaac&limit=32`;
+    const res  = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (res.ok) {
+      const remote = await res.json();
+      if (Array.isArray(remote) && remote.length) showItems(remote);
+    }
+  } catch {}
 }
 
 // ── DOM widget: First / Then ──────────────────────────────────────────────────
