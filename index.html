@@ -60,6 +60,13 @@
       background-size: 20px 20px;
       background-position: 10px 10px;
     }
+    #bg-media-layer {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
     /* Ambient colour bloom that breathes with the timer */
     #board::before {
       content: '';
@@ -300,7 +307,7 @@
     .dbt {
       background: none; border: none;
       color: var(--sub); font-size: 0.95rem; font-weight: 700;
-      cursor: pointer; padding: 3px 12px;
+      cursor: pointer; padding: 3px 9px;
       border-radius: 7px; line-height: 1; user-select: none;
       transition: color 0.06s, background 0.06s, transform 0.06s;
     }
@@ -308,20 +315,35 @@
     .dbt:active { transform: scale(0.8); }
     .dbt:disabled { opacity: 0.25; cursor: default; pointer-events: none; }
     .dgt {
-      font-size: 3rem; font-weight: 900;
+      font-size: 2.7rem; font-weight: 900;
       font-variant-numeric: tabular-nums;
       color: var(--text); line-height: 1;
-      min-width: 1.7ch; text-align: center;
+      min-width: 1.6ch; text-align: center;
       letter-spacing: -1px;
       transition: color 0.15s;
     }
     .digit-timer.disabled .dgt { color: var(--sub); }
+    /* Leading zero-hours are dimmed so the eye lands on the active units */
+    .dgt.leading { color: var(--s3); }
     .digit-sep {
-      font-size: 3rem; font-weight: 900;
+      font-size: 2.7rem; font-weight: 900;
       color: var(--s3); line-height: 1;
       padding: 0 1px; margin-top: 2px;
       /* vertically center with the digits, offset for the buttons */
       align-self: center;
+    }
+    /* Six digits need more room than four — scale the bar down on smaller screens */
+    @media (max-width: 1500px) {
+      .dgt, .digit-sep { font-size: 2.3rem; }
+      .dbt { padding: 3px 7px; }
+      .ctrl-center { gap: 12px; }
+    }
+    @media (max-width: 1240px) {
+      .dgt, .digit-sep { font-size: 1.9rem; }
+      .dbt { padding: 2px 5px; font-size: 0.85rem; }
+      .ctrl-center { gap: 8px; }
+      #controls-bar { padding: 8px 12px; }
+      .ctrl-right { gap: 6px; }
     }
     .ctrl-btns { display: flex; gap: 8px; align-items: center; }
     .btn {
@@ -345,7 +367,7 @@
     /* ── Background panel ── */
     #bg-overlay {
       position: fixed; top: 0; right: 0; bottom: 0;
-      width: 300px;
+      width: 336px;
       background: var(--s1);
       border-left: 1px solid var(--border);
       z-index: 200;
@@ -375,28 +397,89 @@
     }
     .bg-tab {
       background: var(--s2); border: 1px solid var(--border);
-      border-radius: 999px; padding: 4px 11px;
-      font-size: 0.72rem; font-weight: 600;
+      border-radius: 999px; padding: 4px 10px;
+      font-size: 0.7rem; font-weight: 700; line-height: 1.1;
       cursor: pointer; color: var(--sub);
       transition: background 0.1s, color 0.1s;
     }
     .bg-tab:hover { background: var(--s3); color: var(--text); }
     .bg-tab.active { background: var(--accent); color: #061020; border-color: var(--accent); }
     .bg-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr);
-      gap: 8px; padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: 92px;
+      gap: 10px;
+      padding: 12px 12px 18px;
       overflow-y: auto; flex: 1;
+      align-content: start;
     }
     .bg-thumb {
-      aspect-ratio: 16/9; border-radius: 8px;
-      overflow: hidden; cursor: pointer;
+      min-height: 92px;
+      border-radius: 10px;
+      overflow: hidden;
+      cursor: pointer;
       border: 2px solid transparent;
       transition: border-color 0.12s, transform 0.1s;
       position: relative;
+      background: linear-gradient(160deg, #19243c 0%, #0d1424 100%);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.04);
     }
     .bg-thumb:hover { transform: scale(1.04); }
     .bg-thumb.active { border-color: var(--accent); }
-    .bg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .bg-thumb.animated-thumb::before {
+      content: 'Video';
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      z-index: 2;
+      padding: 4px 7px;
+      border-radius: 999px;
+      background: rgba(6, 12, 24, 0.74);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: #dbeafe;
+      font-size: 0.58rem;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .bg-thumb::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(3,8,18,0.04) 0%, rgba(3,8,18,0.14) 100%);
+      pointer-events: none;
+    }
+    .bg-thumb-label {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      padding: 16px 10px 8px;
+      background: linear-gradient(180deg, rgba(4,8,18,0) 0%, rgba(4,8,18,0.86) 100%);
+      color: #f0f4ff;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      pointer-events: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.12s ease, transform 0.12s ease;
+      z-index: 1;
+    }
+    .bg-thumb-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      z-index: 0;
+      background: linear-gradient(160deg, #10192b 0%, #07101c 100%);
+    }
+    .bg-thumb:hover .bg-thumb-label,
+    .bg-thumb.active .bg-thumb-label { opacity: 1; transform: translateY(0); }
     .bg-thumb.none-tile {
       background: var(--s2); border-color: var(--border);
       display: flex; align-items: center; justify-content: center;
@@ -487,182 +570,386 @@
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
     }
-    /* ── First/Then widget ── */
-    .ft-widget {
-      display: flex; align-items: stretch;
-      height: 100%; padding: 8px; gap: 6px; position: relative;
+    .bg-media-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      pointer-events: none;
+      filter: saturate(1.02) contrast(1.02) brightness(0.92);
     }
-    .ft-widget.vertical { flex-direction: column; }
-    .ft-panel {
-      flex: 1; display: flex; flex-direction: column;
-      align-items: center; gap: 0;
-      background: var(--s2); border: 1px solid var(--border);
-      border-radius: 14px; padding: 8px; position: relative;
-      transition: background 0.2s, border-color 0.2s;
-      min-width: 0; overflow: hidden;
+    .animated-bg {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      isolation: isolate;
     }
-    .ft-panel.done { background: rgba(34,197,94,0.12); border-color: #22c55e55; }
-    .ft-label {
-      font-size: 0.58rem; font-weight: 800; letter-spacing: 3px;
-      text-transform: uppercase; color: var(--sub); flex-shrink: 0;
-      margin-bottom: 5px;
+    .animated-bg::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(3,8,18,0.06) 0%, rgba(3,8,18,0.18) 100%);
+      pointer-events: none;
     }
-    .ft-panel.done .ft-label { color: #22c55e; }
-    /* Image fills all available height in the panel */
-    .ft-img-btn {
-      flex: 1; cursor: pointer; min-height: 60px;
-      background: var(--s3); border: 1px solid var(--border);
-      border-radius: 10px; width: 100%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: clamp(2.5rem, 10vw, 5rem);
-      transition: border-color 0.12s, transform 0.1s;
+    .animated-bg .blob,
+    .animated-bg .beam,
+    .animated-bg .mist,
+    .animated-bg .wave,
+    .animated-bg .grid,
+    .animated-bg .scan,
+    .animated-bg .stars,
+    .animated-bg .particles,
+    .animated-bg .bars,
+    .animated-bg .snow-layer,
+    .animated-bg .sheet {
+      position: absolute;
+      inset: 0;
     }
-    .ft-img-btn:hover { border-color: var(--accent); transform: scale(1.02); }
-    .ft-img-btn img { width: 100%; height: 100%; object-fit: contain; border-radius: 8px; }
-    .ft-text {
-      background: none; border: none; border-bottom: 1px solid var(--border);
-      color: var(--text); font-size: 0.85rem; font-weight: 700;
-      text-align: center; width: 100%; outline: none; padding: 5px 0 3px;
-      flex-shrink: 0; margin-top: 5px;
+    .animated-bg .blob,
+    .animated-bg .mist,
+    .animated-bg .wave,
+    .animated-bg .beam {
+      filter: blur(28px);
+      opacity: 0.8;
+      border-radius: 50%;
     }
-    .ft-text::placeholder { color: var(--sub); font-weight: 400; }
-    .ft-text:focus { border-bottom-color: var(--accent); }
-    .ft-done-btn {
-      background: #22c55e22; border: 1px solid #22c55e55;
-      color: #22c55e; border-radius: 999px;
-      padding: 4px 12px; font-size: 0.68rem; font-weight: 700;
-      cursor: pointer; transition: background 0.15s; flex-shrink: 0;
-      margin-top: 6px;
+    .animated-bg .blob {
+      animation: bgFloat 18s ease-in-out infinite alternate;
     }
-    .ft-done-btn:hover { background: #22c55e44; }
-    .ft-done-btn.undone { background: var(--s3); border-color: var(--border); color: var(--sub); }
-    .ft-done-check {
-      position: absolute; top: 6px; right: 8px;
-      font-size: 1rem; opacity: 0; transition: opacity 0.2s;
+    .animated-bg .beam {
+      animation: bgSweep 22s linear infinite;
     }
-    .ft-panel.done .ft-done-check { opacity: 1; }
-    .ft-arrow {
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem; color: var(--sub); flex-shrink: 0; padding: 0 2px;
+    .animated-bg .mist {
+      animation: bgDrift 30s linear infinite;
     }
-    .ft-widget.vertical .ft-arrow { padding: 2px 0; }
-    .ft-layout-btn {
-      position: absolute; top: 4px; right: 4px; z-index: 2;
-      background: var(--s3); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--sub); font-size: 0.75rem;
-      cursor: pointer; padding: 2px 7px; line-height: 1.4;
-      transition: background 0.1s, color 0.1s;
+    .animated-bg .wave {
+      animation: bgWave 16s ease-in-out infinite alternate;
     }
-    .ft-layout-btn:hover { background: var(--s2); color: var(--text); }
+    .animated-bg .scan {
+      animation: bgScan 6s linear infinite;
+    }
+    .animated-bg .stars {
+      animation: bgTwinkle 8s ease-in-out infinite alternate;
+    }
+    .animated-bg .particles {
+      animation: bgRise 16s linear infinite;
+    }
+    .animated-bg .bars {
+      animation: bgPulse 7s ease-in-out infinite alternate;
+    }
+    .animated-bg .snow-layer,
+    .animated-bg .sheet {
+      animation: bgFall 13s linear infinite;
+    }
 
-    /* ── First/Then library overlay ── */
-    .ft-lib-overlay {
-      position: fixed; inset: 0; z-index: 500;
-      background: rgba(6,10,20,0.82);
-      backdrop-filter: blur(8px);
-      display: none; align-items: center; justify-content: center;
+    .scene-aurora {
+      background: linear-gradient(180deg, #03111f 0%, #081b31 45%, #11283b 100%);
     }
-    .ft-lib-overlay.open { display: flex; }
-    .ft-lib-panel {
-      background: var(--s1); border: 1px solid var(--border);
-      border-radius: 20px; width: 500px; max-width: 94vw; max-height: 80vh;
-      display: flex; flex-direction: column;
-      box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+    .scene-aurora .blob.a {
+      inset: -10% 35% 38% -8%;
+      background: radial-gradient(circle, rgba(34,197,94,0.85), rgba(34,197,94,0.06) 68%, transparent 74%);
+      animation-duration: 24s;
     }
-    .ft-lib-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 16px 8px; border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
+    .scene-aurora .blob.b {
+      inset: 12% -6% 16% 34%;
+      background: radial-gradient(circle, rgba(56,189,248,0.78), rgba(56,189,248,0.08) 62%, transparent 72%);
+      animation-duration: 19s;
+      animation-delay: -8s;
     }
-    .ft-lib-header h3 { font-size: 0.9rem; font-weight: 700; }
-    .ft-lib-close-btn {
-      background: none; border: none; color: var(--sub);
-      font-size: 1.2rem; cursor: pointer; padding: 2px 8px; border-radius: 8px;
+    .scene-aurora .beam {
+      inset: -18% -8% 38% -8%;
+      border-radius: 42%;
+      background: linear-gradient(110deg, rgba(16,185,129,0.04) 0%, rgba(56,189,248,0.55) 35%, rgba(134,239,172,0.48) 62%, rgba(125,211,252,0.05) 100%);
+      transform: rotate(-8deg);
     }
-    .ft-lib-close-btn:hover { background: var(--s2); color: var(--text); }
-    .ft-lib-search-row {
-      padding: 8px 12px; flex-shrink: 0;
-      border-bottom: 1px solid var(--border);
-    }
-    .ft-lib-search-row input {
-      width: 100%; background: var(--s2); border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text); padding: 7px 12px;
-      font-size: 0.85rem; outline: none;
-    }
-    .ft-lib-search-row input:focus { border-color: var(--accent); }
-    .ft-lib-tabs {
-      display: flex; gap: 5px; padding: 8px 12px;
-      flex-wrap: wrap; border-bottom: 1px solid var(--border); flex-shrink: 0;
-    }
-    .ft-lib-tab {
-      background: var(--s2); border: 1px solid var(--border);
-      border-radius: 999px; padding: 3px 11px;
-      font-size: 0.7rem; font-weight: 600; cursor: pointer; color: var(--sub);
-      transition: background 0.1s, color 0.1s;
-    }
-    .ft-lib-tab.active { background: var(--accent); color: #061020; border-color: var(--accent); }
-    .ft-lib-grid {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 8px; padding: 12px; overflow-y: auto; flex: 1;
-    }
-    .ft-lib-card {
-      background: var(--s2); border: 1px solid var(--border);
-      border-radius: 11px; padding: 8px 6px;
-      display: flex; flex-direction: column; align-items: center; gap: 5px;
-      cursor: pointer; transition: background 0.1s, border-color 0.1s, transform 0.1s;
-    }
-    .ft-lib-card:hover { background: var(--s3); border-color: var(--accent); transform: translateY(-2px); }
-    .ft-lib-card:active { transform: scale(0.93); }
-    .ft-lib-card img { width: 64px; height: 64px; object-fit: contain; }
-    .ft-lib-lbl { font-size: 0.58rem; color: var(--sub); text-align: center; font-weight: 600; line-height: 1.3; }
-    .ft-lib-status {
-      grid-column: 1/-1; text-align: center; color: var(--sub);
-      font-size: 0.8rem; padding: 24px 0;
-    }
-    .ft-lib-upload {
-      flex-shrink: 0; padding: 8px 12px;
-      border-top: 1px solid var(--border);
-      display: flex; align-items: center; gap: 8px;
-    }
-    .ft-upload-btn {
-      flex: 1; background: var(--s2); border: 1px dashed var(--border);
-      border-radius: 10px; padding: 8px 12px; cursor: pointer;
-      color: var(--sub); font-size: 0.78rem; font-weight: 600;
-      transition: border-color 0.12s, color 0.12s;
-      text-align: center;
-    }
-    .ft-upload-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .ft-lib-footer {
-      flex-shrink: 0; padding: 4px 14px 6px;
-      font-size: 0.6rem; color: var(--sub);
-      text-align: center;
-    }
-    .ft-lib-footer a { color: var(--accent); text-decoration: none; }
-    /* Panel image display */
 
-    /* ── Text widget ── */
-    .text-widget {
-      height: 100%; display: flex; flex-direction: column;
-      padding: 10px;
+    .scene-rain {
+      background: linear-gradient(180deg, #07111d 0%, #0e2238 52%, #0f2f4b 100%);
     }
-    .text-widget-toolbar {
-      display: flex; gap: 6px; align-items: center;
-      margin-bottom: 6px; flex-shrink: 0;
+    .scene-rain .sheet {
+      background-image: repeating-linear-gradient(102deg,
+        rgba(255,255,255,0) 0 18px,
+        rgba(255,255,255,0.22) 18px 20px,
+        rgba(255,255,255,0) 20px 36px);
+      opacity: 0.28;
+      transform: scale(1.2);
     }
-    .text-size-btn {
-      background: var(--s2); border: 1px solid var(--border);
-      border-radius: 6px; color: var(--sub); padding: 2px 8px;
-      font-size: 0.72rem; cursor: pointer; font-weight: 600;
+    .scene-rain .blob.a {
+      inset: 8% 14% 42% 42%;
+      background: radial-gradient(circle, rgba(125,211,252,0.28), transparent 66%);
+      animation-duration: 12s;
     }
-    .text-size-btn.active { background: var(--accent); color: #061020; border-color: var(--accent); }
-    .text-editor {
-      flex: 1; background: none; border: none; outline: none;
-      color: var(--text); font-family: inherit; resize: none;
-      font-size: 1.1rem; line-height: 1.5; width: 100%;
-      placeholder-color: var(--sub);
+    .scene-rain .blob.b {
+      inset: 42% 40% 6% 12%;
+      background: radial-gradient(circle, rgba(191,219,254,0.24), transparent 72%);
+      animation-duration: 16s;
+      animation-delay: -5s;
     }
-    .text-editor::placeholder { color: var(--sub); }
 
+    .scene-tide {
+      background: linear-gradient(180deg, #04151f 0%, #08304a 48%, #0c4458 100%);
+    }
+    .scene-tide .wave.a {
+      inset: 52% -10% -18% -12%;
+      background: radial-gradient(ellipse at 50% 50%, rgba(125,211,252,0.50) 0%, rgba(45,212,191,0.32) 42%, transparent 74%);
+    }
+    .scene-tide .wave.b {
+      inset: 58% -20% -24% 6%;
+      background: radial-gradient(ellipse at 50% 50%, rgba(56,189,248,0.42) 0%, rgba(14,165,233,0.18) 50%, transparent 78%);
+      animation-duration: 20s;
+      animation-delay: -7s;
+    }
+    .scene-tide .mist {
+      inset: 8% -10% 34% -18%;
+      background: radial-gradient(circle, rgba(255,255,255,0.12), transparent 62%);
+    }
+
+    .scene-clouds {
+      background: linear-gradient(180deg, #243b59 0%, #486581 44%, #bcccdc 100%);
+    }
+    .scene-clouds .mist.a {
+      inset: 14% 38% 44% -14%;
+      background: radial-gradient(circle, rgba(255,255,255,0.84), rgba(255,255,255,0.16) 54%, transparent 74%);
+    }
+    .scene-clouds .mist.b {
+      inset: 28% -12% 28% 28%;
+      background: radial-gradient(circle, rgba(255,255,255,0.66), rgba(255,255,255,0.12) 50%, transparent 72%);
+      animation-duration: 24s;
+      animation-delay: -10s;
+    }
+    .scene-clouds .mist.c {
+      inset: 54% 12% -8% 8%;
+      background: radial-gradient(circle, rgba(255,255,255,0.40), transparent 70%);
+      animation-duration: 32s;
+    }
+
+    .scene-starfield {
+      background: linear-gradient(180deg, #020617 0%, #09152d 60%, #130f2a 100%);
+    }
+    .scene-starfield .stars.a,
+    .scene-starfield .stars.b {
+      background-image:
+        radial-gradient(circle at 18% 22%, rgba(255,255,255,0.95) 0 1px, transparent 1.8px),
+        radial-gradient(circle at 42% 36%, rgba(255,255,255,0.72) 0 1.2px, transparent 2px),
+        radial-gradient(circle at 68% 18%, rgba(255,255,255,0.92) 0 1px, transparent 2px),
+        radial-gradient(circle at 80% 62%, rgba(191,219,254,0.95) 0 1px, transparent 2px),
+        radial-gradient(circle at 24% 74%, rgba(255,255,255,0.84) 0 1px, transparent 2px),
+        radial-gradient(circle at 56% 82%, rgba(196,181,253,0.90) 0 1px, transparent 2px);
+      background-size: 320px 220px;
+    }
+    .scene-starfield .stars.b {
+      transform: scale(1.25);
+      opacity: 0.58;
+      animation-duration: 11s;
+      animation-delay: -4s;
+    }
+    .scene-starfield .blob.a {
+      inset: 18% 44% 18% 8%;
+      background: radial-gradient(circle, rgba(59,130,246,0.34), transparent 68%);
+    }
+    .scene-starfield .blob.b {
+      inset: 34% 6% 8% 52%;
+      background: radial-gradient(circle, rgba(168,85,247,0.28), transparent 72%);
+      animation-duration: 20s;
+    }
+
+    .scene-ember {
+      background: linear-gradient(180deg, #210a05 0%, #5b1c11 54%, #a64115 100%);
+    }
+    .scene-ember .blob.a {
+      inset: 50% -8% -18% 18%;
+      background: radial-gradient(circle, rgba(251,146,60,0.64), transparent 72%);
+    }
+    .scene-ember .blob.b {
+      inset: 12% 54% 26% -8%;
+      background: radial-gradient(circle, rgba(251,191,36,0.34), transparent 70%);
+      animation-duration: 12s;
+    }
+    .scene-ember .particles {
+      background-image:
+        radial-gradient(circle at 12% 88%, rgba(255,220,120,0.86) 0 2px, transparent 3px),
+        radial-gradient(circle at 22% 76%, rgba(255,186,73,0.82) 0 1.8px, transparent 3px),
+        radial-gradient(circle at 46% 92%, rgba(255,235,190,0.78) 0 2px, transparent 3px),
+        radial-gradient(circle at 72% 84%, rgba(255,174,66,0.85) 0 2px, transparent 3px),
+        radial-gradient(circle at 84% 68%, rgba(255,220,140,0.76) 0 1.5px, transparent 3px);
+      opacity: 0.7;
+    }
+
+    .scene-circuit {
+      background: linear-gradient(180deg, #03121f 0%, #0a2a3d 100%);
+    }
+    .scene-circuit .grid {
+      background-image:
+        linear-gradient(rgba(125,211,252,0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(125,211,252,0.12) 1px, transparent 1px);
+      background-size: 36px 36px;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,0.25), #000 20%, #000 80%, rgba(0,0,0,0.18));
+    }
+    .scene-circuit .scan {
+      inset: 0 -20% 0 -20%;
+      background: linear-gradient(90deg, transparent 0%, rgba(56,189,248,0.04) 40%, rgba(34,197,94,0.32) 50%, rgba(56,189,248,0.04) 60%, transparent 100%);
+      filter: blur(8px);
+    }
+    .scene-circuit .blob.a {
+      inset: 18% 58% 48% 8%;
+      background: radial-gradient(circle, rgba(34,197,94,0.24), transparent 66%);
+      animation-duration: 14s;
+    }
+    .scene-circuit .blob.b {
+      inset: 58% 8% 12% 56%;
+      background: radial-gradient(circle, rgba(56,189,248,0.24), transparent 68%);
+      animation-duration: 18s;
+      animation-delay: -6s;
+    }
+
+    .scene-neon {
+      background: linear-gradient(180deg, #090d1a 0%, #151d36 54%, #2b1f52 100%);
+    }
+    .scene-neon .bars {
+      background-image:
+        linear-gradient(90deg,
+          transparent 0 6%,
+          rgba(56,189,248,0.30) 6% 10%,
+          transparent 10% 20%,
+          rgba(244,114,182,0.26) 20% 24%,
+          transparent 24% 38%,
+          rgba(99,102,241,0.28) 38% 43%,
+          transparent 43% 58%,
+          rgba(45,212,191,0.26) 58% 62%,
+          transparent 62% 78%,
+          rgba(168,85,247,0.28) 78% 82%,
+          transparent 82% 100%);
+      opacity: 0.46;
+      filter: blur(1px);
+    }
+    .scene-neon .beam {
+      inset: -20% -18% 20% -18%;
+      border-radius: 36%;
+      background: linear-gradient(120deg, rgba(59,130,246,0.05), rgba(96,165,250,0.32), rgba(244,114,182,0.28), rgba(59,130,246,0.05));
+    }
+    .scene-neon .blob.a {
+      inset: 14% 58% 46% 6%;
+      background: radial-gradient(circle, rgba(56,189,248,0.26), transparent 70%);
+    }
+    .scene-neon .blob.b {
+      inset: 46% 6% 10% 54%;
+      background: radial-gradient(circle, rgba(217,70,239,0.22), transparent 72%);
+      animation-duration: 15s;
+    }
+
+    .scene-petri {
+      background: linear-gradient(180deg, #05141c 0%, #10343c 58%, #1f5d4d 100%);
+    }
+    .scene-petri .blob.a,
+    .scene-petri .blob.b,
+    .scene-petri .blob.c {
+      border-radius: 44%;
+      filter: blur(18px);
+    }
+    .scene-petri .blob.a {
+      inset: 14% 48% 34% 10%;
+      background: radial-gradient(circle, rgba(110,231,183,0.34), transparent 72%);
+    }
+    .scene-petri .blob.b {
+      inset: 40% 18% 12% 46%;
+      background: radial-gradient(circle, rgba(52,211,153,0.30), transparent 70%);
+      animation-duration: 20s;
+      animation-delay: -7s;
+    }
+    .scene-petri .blob.c {
+      inset: 24% 8% 42% 60%;
+      background: radial-gradient(circle, rgba(45,212,191,0.22), transparent 68%);
+      animation-duration: 16s;
+    }
+
+    .scene-snow {
+      background: linear-gradient(180deg, #0d1b2a 0%, #2d4f73 52%, #7fa7c8 100%);
+    }
+    .scene-snow .snow-layer.a,
+    .scene-snow .snow-layer.b {
+      background-image:
+        radial-gradient(circle at 12% 8%, rgba(255,255,255,0.95) 0 1.5px, transparent 2.5px),
+        radial-gradient(circle at 36% 24%, rgba(255,255,255,0.90) 0 1px, transparent 2px),
+        radial-gradient(circle at 60% 18%, rgba(255,255,255,0.95) 0 1.6px, transparent 2.6px),
+        radial-gradient(circle at 82% 12%, rgba(255,255,255,0.88) 0 1.2px, transparent 2.2px),
+        radial-gradient(circle at 22% 40%, rgba(255,255,255,0.92) 0 1.4px, transparent 2.4px),
+        radial-gradient(circle at 70% 46%, rgba(255,255,255,0.96) 0 1.3px, transparent 2.3px);
+      background-size: 240px 180px;
+      opacity: 0.64;
+    }
+    .scene-snow .snow-layer.b {
+      transform: scale(1.35);
+      opacity: 0.42;
+      animation-duration: 19s;
+      animation-delay: -7s;
+    }
+    .scene-snow .mist {
+      inset: 10% 6% 48% 8%;
+      background: radial-gradient(circle, rgba(255,255,255,0.26), transparent 72%);
+    }
+
+    @keyframes bgFloat {
+      0% { transform: translate3d(-3%, 2%, 0) scale(1); }
+      50% { transform: translate3d(4%, -3%, 0) scale(1.08); }
+      100% { transform: translate3d(8%, 4%, 0) scale(0.96); }
+    }
+    @keyframes bgSweep {
+      0% { transform: translateX(-8%) rotate(-8deg) scale(1); opacity: 0.36; }
+      50% { transform: translateX(3%) rotate(-4deg) scale(1.04); opacity: 0.58; }
+      100% { transform: translateX(10%) rotate(-10deg) scale(0.98); opacity: 0.34; }
+    }
+    @keyframes bgDrift {
+      0% { transform: translateX(-10%) translateY(0); }
+      100% { transform: translateX(12%) translateY(-4%); }
+    }
+    @keyframes bgWave {
+      0% { transform: translateX(-4%) translateY(0) scaleX(1); }
+      100% { transform: translateX(5%) translateY(-3%) scaleX(1.08); }
+    }
+    @keyframes bgScan {
+      0% { transform: translateX(-35%); opacity: 0; }
+      16% { opacity: 0.72; }
+      50% { opacity: 0.56; }
+      84% { opacity: 0.2; }
+      100% { transform: translateX(35%); opacity: 0; }
+    }
+    @keyframes bgTwinkle {
+      0% { opacity: 0.48; transform: scale(1); }
+      50% { opacity: 0.94; transform: scale(1.03); }
+      100% { opacity: 0.56; transform: scale(1.01); }
+    }
+    @keyframes bgRise {
+      0% { transform: translateY(8%) scale(1); opacity: 0.22; }
+      20% { opacity: 0.76; }
+      100% { transform: translateY(-24%) scale(1.08); opacity: 0.04; }
+    }
+    @keyframes bgPulse {
+      0% { opacity: 0.32; transform: scaleY(0.98); }
+      100% { opacity: 0.6; transform: scaleY(1.03); }
+    }
+    @keyframes bgFall {
+      0% { transform: translateY(-12%); }
+      100% { transform: translateY(12%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .animated-bg .blob,
+      .animated-bg .beam,
+      .animated-bg .mist,
+      .animated-bg .wave,
+      .animated-bg .grid,
+      .animated-bg .scan,
+      .animated-bg .stars,
+      .animated-bg .particles,
+      .animated-bg .bars,
+      .animated-bg .snow-layer,
+      .animated-bg .sheet {
+        animation: none !important;
+      }
+    }
     .sound-group {
       display: flex; align-items: center; gap: 6px;
       background: var(--s2);
@@ -703,7 +990,7 @@
   <div class="tagline">Visual timer widgets for classrooms, focus &amp; more</div>
 </header>
 
-<div id="board"></div>
+<div id="board"><div id="bg-media-layer" aria-hidden="true"></div></div>
 
 <!-- Add Widget Overlay -->
 <div id="add-overlay">
@@ -737,11 +1024,8 @@
       <button class="wt-btn" data-type="digital">
         <span class="wt-icon">🔢</span><span class="wt-label">Digital</span>
       </button>
-      <button class="wt-btn" data-type="firstthen">
-        <span class="wt-icon">✅</span><span class="wt-label">First / Then</span>
-      </button>
-      <button class="wt-btn" data-type="text">
-        <span class="wt-icon">📝</span><span class="wt-label">Text</span>
+      <button class="wt-btn" data-type="ufo">
+        <span class="wt-icon">🛸</span><span class="wt-label">Cow Abduction</span>
       </button>
     </div>
   </div>
@@ -766,7 +1050,16 @@
   </div>
   <div class="bg-tabs">
     <button class="bg-tab active" data-cat="all">All</button>
+    <button class="bg-tab" data-cat="animated">Animated</button>
     <button class="bg-tab" data-cat="nature">Nature</button>
+    <button class="bg-tab" data-cat="animals">Animals</button>
+    <button class="bg-tab" data-cat="water">Water</button>
+    <button class="bg-tab" data-cat="weather">Weather</button>
+    <button class="bg-tab" data-cat="cities">Cities</button>
+    <button class="bg-tab" data-cat="architecture">Architecture</button>
+    <button class="bg-tab" data-cat="art">Art</button>
+    <button class="bg-tab" data-cat="science">Science</button>
+    <button class="bg-tab" data-cat="engineering">Engineering</button>
     <button class="bg-tab" data-cat="space">Space</button>
     <button class="bg-tab" data-cat="abstract">Abstract</button>
     <button class="bg-tab" data-cat="calm">Calm</button>
@@ -787,24 +1080,35 @@
   <div class="ctrl-center">
     <div class="digit-timer" id="digit-timer">
       <div class="digit-col">
-        <button class="dbt" data-delta="600">+</button>
+        <button class="dbt" data-delta="36000">+</button>
         <span class="dgt" id="d0">0</span>
+        <button class="dbt" data-delta="-36000">−</button>
+      </div>
+      <div class="digit-col">
+        <button class="dbt" data-delta="3600">+</button>
+        <span class="dgt" id="d1">0</span>
+        <button class="dbt" data-delta="-3600">−</button>
+      </div>
+      <div class="digit-sep">:</div>
+      <div class="digit-col">
+        <button class="dbt" data-delta="600">+</button>
+        <span class="dgt" id="d2">0</span>
         <button class="dbt" data-delta="-600">−</button>
       </div>
       <div class="digit-col">
         <button class="dbt" data-delta="60">+</button>
-        <span class="dgt" id="d1">5</span>
+        <span class="dgt" id="d3">5</span>
         <button class="dbt" data-delta="-60">−</button>
       </div>
       <div class="digit-sep">:</div>
       <div class="digit-col">
         <button class="dbt" data-delta="10">+</button>
-        <span class="dgt" id="d2">0</span>
+        <span class="dgt" id="d4">0</span>
         <button class="dbt" data-delta="-10">−</button>
       </div>
       <div class="digit-col">
         <button class="dbt" data-delta="1">+</button>
-        <span class="dgt" id="d3">0</span>
+        <span class="dgt" id="d5">0</span>
         <button class="dbt" data-delta="-1">−</button>
       </div>
     </div>
@@ -829,7 +1133,7 @@
   <!-- col 3: layout buttons, right-aligned -->
   <div class="ctrl-right">
     <button id="bg-btn" title="Background image">🖼 Background</button>
-    <button id="layout-btn" title="Reset layout">⊞ Reset Layout</button>
+    <button id="layout-btn" title="Align widgets">⊞ Align Widgets</button>
     <button id="add-btn">＋ Add Widget</button>
   </div>
 
@@ -857,22 +1161,25 @@ const WIDGET_META = {
   bar:       { name: 'Progress Bar',  defaultW: 380, defaultH: 110 },
   blocks:    { name: 'Blocks',        defaultW: 360, defaultH: 270 },
   dots:      { name: 'Dots',          defaultW: 360, defaultH: 270 },
-  liquid:    { name: 'Liquid Timer',  defaultW: 170, defaultH: 370 },
+  liquid:    { name: 'Liquid Timer',  defaultW: 230, defaultH: 370 },
   hourglass: { name: 'Hourglass',     defaultW: 170, defaultH: 380 },
   clock:     { name: 'Analog Clock',  defaultW: 280, defaultH: 300 },
   digital:   { name: 'Digital',       defaultW: 300, defaultH: 170 },
-  firstthen: { name: 'First / Then',  defaultW: 400, defaultH: 260, dom: true },
-  text:      { name: 'Text',          defaultW: 320, defaultH: 220, dom: true },
+  ufo:       { name: 'Cow Abduction', defaultW: 460, defaultH: 300 },
 };
 
 let widgets = [];
 let nextId  = 0;
 let topZ    = 10;
+let layoutMode = 'auto';
 const board = document.getElementById('board');
+const bgMediaLayer = document.getElementById('bg-media-layer');
 
 // ── Grid snap (for manual drag/resize only) ───────────────────────────────────
 const SNAP = 20;
 function snap(v) { return Math.round(v / SNAP) * SNAP; }
+function snapDown(v) { return Math.floor(v / SNAP) * SNAP; }
+function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
 
 // ── Auto-layout: pixel-perfect tiling — no snap rounding here ────────────────
 const M = 8;  // outer margin
@@ -912,6 +1219,198 @@ function autoLayout(animate = true) {
   });
 }
 
+function getBoardRect() {
+  return {
+    left: M,
+    top: M,
+    right: Math.max(M, board.clientWidth - M),
+    bottom: Math.max(M, board.clientHeight - M),
+  };
+}
+
+// ── Reflow when the board changes size ────────────────────────────────────────
+// Auto layouts re-tile to fill the new space. Manual arrangements are scaled
+// proportionally so the user's composition is preserved instead of stranded.
+const MIN_W = 160, MIN_H = 140;   // must match .widget-card min-width/min-height
+let lastBoardW = 0, lastBoardH = 0;
+
+function reflowLayout() {
+  const bw = board.clientWidth, bh = board.clientHeight;
+  if (bw < 40 || bh < 40) return;              // collapsed / hidden — ignore
+  const pw = lastBoardW, ph = lastBoardH;
+  lastBoardW = bw; lastBoardH = bh;
+
+  if (!pw || !ph) return;                      // first observation — just seed
+  if (pw === bw && ph === bh) return;          // nothing actually changed
+  if (!widgets.length) return;
+
+  if (layoutMode === 'auto') {
+    autoLayout(false);                         // instant re-tile, no animation
+    scheduleSave();
+    return;
+  }
+
+  const sx = (bw - M * 2) / Math.max(1, pw - M * 2);
+  const sy = (bh - M * 2) / Math.max(1, ph - M * 2);
+
+  widgets.forEach(w => {
+    const c = w.card;
+    const left = parseFloat(c.style.left)   || 0;
+    const top  = parseFloat(c.style.top)    || 0;
+    const wid  = parseFloat(c.style.width)  || c.offsetWidth;
+    const hei  = parseFloat(c.style.height) || c.offsetHeight;
+
+    // Scale size, then position, both relative to the board's inner margin
+    let nw = Math.max(MIN_W, Math.round(wid * sx));
+    let nh = Math.max(MIN_H, Math.round(hei * sy));
+    nw = Math.min(nw, Math.max(MIN_W, bw - M * 2));
+    nh = Math.min(nh, Math.max(MIN_H, bh - M * 2));
+
+    let nl = Math.round(M + (left - M) * sx);
+    let nt = Math.round(M + (top  - M) * sy);
+    // Keep fully on the board
+    nl = Math.max(M, Math.min(nl, bw - M - nw));
+    nt = Math.max(M, Math.min(nt, bh - M - nh));
+
+    c.style.left = nl + 'px';  c.style.top    = nt + 'px';
+    c.style.width = nw + 'px'; c.style.height = nh + 'px';
+  });
+  scheduleSave();
+}
+
+// ResizeObserver catches every cause of a board size change — window resizes,
+// and the control bar changing height at different breakpoints.
+let _reflowRaf = null;
+new ResizeObserver(() => {
+  if (_reflowRaf) cancelAnimationFrame(_reflowRaf);
+  _reflowRaf = requestAnimationFrame(() => { _reflowRaf = null; reflowLayout(); });
+}).observe(board);
+
+function getCardRect(card) {
+  return {
+    left: card.offsetLeft,
+    top: card.offsetTop,
+    right: card.offsetLeft + card.offsetWidth,
+    bottom: card.offsetTop + card.offsetHeight,
+  };
+}
+
+function expandRect(rect, pad) {
+  return {
+    left: rect.left - pad,
+    top: rect.top - pad,
+    right: rect.right + pad,
+    bottom: rect.bottom + pad,
+  };
+}
+
+function overlaps(a, b) {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function findLargestAvailableRect(excludeCard = null, minW = 0, minH = 0) {
+  const boardRect = getBoardRect();
+  const obstacles = widgets
+    .filter(w => w.card !== excludeCard)
+    .map(w => getCardRect(w.card));
+
+  if (!obstacles.length) return boardRect;
+
+  const xs = new Set([boardRect.left, boardRect.right]);
+  const ys = new Set([boardRect.top, boardRect.bottom]);
+
+  obstacles.forEach(rect => {
+    const padded = expandRect(rect, G);
+    xs.add(clamp(padded.left, boardRect.left, boardRect.right));
+    xs.add(clamp(padded.right, boardRect.left, boardRect.right));
+    ys.add(clamp(padded.top, boardRect.top, boardRect.bottom));
+    ys.add(clamp(padded.bottom, boardRect.top, boardRect.bottom));
+  });
+
+  const xVals = [...xs].sort((a, b) => a - b);
+  const yVals = [...ys].sort((a, b) => a - b);
+  let best = null;
+
+  for (let xi = 0; xi < xVals.length - 1; xi++) {
+    for (let xj = xi + 1; xj < xVals.length; xj++) {
+      const left = xVals[xi];
+      const right = xVals[xj];
+      const width = right - left;
+      if (width < minW) continue;
+
+      for (let yi = 0; yi < yVals.length - 1; yi++) {
+        for (let yj = yi + 1; yj < yVals.length; yj++) {
+          const top = yVals[yi];
+          const bottom = yVals[yj];
+          const height = bottom - top;
+          if (height < minH) continue;
+
+          const candidate = { left, top, right, bottom };
+          if (obstacles.some(rect => overlaps(candidate, expandRect(rect, G)))) continue;
+
+          const area = width * height;
+          if (
+            !best ||
+            area > best.area ||
+            (area === best.area && (top < best.top || (top === best.top && left < best.left)))
+          ) {
+            best = { ...candidate, width, height, area };
+          }
+        }
+      }
+    }
+  }
+
+  return best;
+}
+
+function fitWidgetDimension(defaultSize, available, minSize) {
+  if (available <= 0) return defaultSize;
+  if (available <= minSize) return available;
+
+  const preferred = Math.min(defaultSize, available);
+  const snapped = snapDown(preferred);
+  if (snapped >= minSize) return snapped;
+  return available;
+}
+
+function placeWidgetInLargestSpace(card, meta) {
+  const minW = 160;
+  const minH = 140;
+  const boardRect = getBoardRect();
+  const targetRect =
+    findLargestAvailableRect(card, minW, minH) ||
+    findLargestAvailableRect(card) ||
+    boardRect;
+
+  const availW = Math.max(0, targetRect.right - targetRect.left);
+  const availH = Math.max(0, targetRect.bottom - targetRect.top);
+  const width = Math.min(
+    fitWidgetDimension(meta.defaultW, availW, minW),
+    boardRect.right - boardRect.left
+  );
+  const height = Math.min(
+    fitWidgetDimension(meta.defaultH, availH, minH),
+    boardRect.bottom - boardRect.top
+  );
+
+  const left = clamp(
+    targetRect.left + Math.max(0, (availW - width) / 2),
+    boardRect.left,
+    Math.max(boardRect.left, boardRect.right - width)
+  );
+  const top = clamp(
+    targetRect.top + Math.max(0, (availH - height) / 2),
+    boardRect.top,
+    Math.max(boardRect.top, boardRect.bottom - height)
+  );
+
+  card.style.left = snap(left) + 'px';
+  card.style.top = snap(top) + 'px';
+  card.style.width = Math.max(minW, snapDown(width) || width) + 'px';
+  card.style.height = Math.max(minH, snapDown(height) || height) + 'px';
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 // Smoothly interpolate between hex colours
 function lerpHex(a, b, t) {
@@ -936,7 +1435,25 @@ function timerColors(pct) {
 }
 function fmt(s) {
   const secs = Math.max(0, Math.ceil(s - 0.001)); // ceil so display shows whole seconds remaining
-  return `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')}`;
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor(secs / 60) % 60;
+  const sec = secs % 60;
+  // Hours only appear once there are hours — keeps short timers reading "5:00"
+  return h > 0
+    ? `${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+    : `${m}:${String(sec).padStart(2,'0')}`;
+}
+// Set ctx.font at `fs`, shrinking it so `text` fits within maxW.
+// Labels grow from "5:00" to "99:59:59" once hours are in play, so a font size
+// derived only from the container will overflow. Returns the size actually used.
+function fitFont(ctx, text, maxW, fs, weight = 900) {
+  ctx.font = `${weight} ${fs}px -apple-system,sans-serif`;
+  const w = ctx.measureText(text).width;
+  if (w > maxW && w > 0) {
+    fs = Math.max(8, fs * (maxW / w));
+    ctx.font = `${weight} ${fs}px -apple-system,sans-serif`;
+  }
+  return fs;
 }
 function rrect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -948,9 +1465,11 @@ function rrect(ctx, x, y, w, h, r) {
 }
 
 // ── Create widget ─────────────────────────────────────────────────────────────
-function createWidget(type) {
-  const id   = ++nextId;
+function createWidget(type, options = {}) {
+  const { skipArrange = false, skipReveal = false } = options;
   const meta = WIDGET_META[type];
+  if (!meta) return null;               // unknown/retired widget type
+  const id   = ++nextId;
 
   const card = document.createElement('div');
   card.className = 'widget-card';
@@ -958,57 +1477,49 @@ function createWidget(type) {
   // Start hidden at 0,0 — autoLayout will place & reveal it
   card.style.cssText = `left:0;top:0;width:${meta.defaultW}px;height:${meta.defaultH}px;z-index:${topZ++};opacity:0;pointer-events:none`;
 
-  if (meta.dom) {
-    // DOM-based widget — no canvas
-    card.innerHTML = `
-      <div class="widget-header">
-        <div class="widget-title"><span class="drag-dots">⠿⠿</span>${meta.name}</div>
-        <button class="widget-close" title="Remove">×</button>
-      </div>
-      <div class="widget-body" id="wb-${id}"></div>
-      <div class="resize-handle"></div>`;
-    board.appendChild(card);
-    card.querySelector('.widget-close').addEventListener('click', e => { e.stopPropagation(); removeWidget(id); });
-    const domBody = card.querySelector('.widget-body');
-    if (type === 'firstthen') initFirstThen(domBody);
-    if (type === 'text')      initText(domBody);
-    const widget = { id, type, card, dom: true, ro: { disconnect(){} } };
-    widgets.push(widget);
-    makeDraggable(card); makeResizable(card);
-  } else {
-    // Canvas-based widget
-    card.innerHTML = `
-      <div class="widget-header">
-        <div class="widget-title"><span class="drag-dots">⠿⠿</span>${meta.name}</div>
-        <button class="widget-close" title="Remove">×</button>
-      </div>
-      <div class="widget-body"><canvas></canvas></div>
-      <div class="resize-handle"></div>`;
-    board.appendChild(card);
+  card.innerHTML = `
+    <div class="widget-header">
+      <div class="widget-title"><span class="drag-dots">⠿⠿</span>${meta.name}</div>
+      <button class="widget-close" title="Remove">×</button>
+    </div>
+    <div class="widget-body"><canvas></canvas></div>
+    <div class="resize-handle"></div>`;
+  board.appendChild(card);
 
-    const body   = card.querySelector('.widget-body');
-    const canvas = card.querySelector('canvas');
-    const ctx    = canvas.getContext('2d');
-    const state  = { drops:[], grains:[], lastSpawn:0 };
-    const ro = new ResizeObserver(() => {
-      canvas.width  = body.clientWidth;
-      canvas.height = body.clientHeight;
-    });
-    ro.observe(body);
-    card.querySelector('.widget-close').addEventListener('click', e => { e.stopPropagation(); removeWidget(id); });
-    const widget = { id, type, card, canvas, ctx, state, ro };
-    widgets.push(widget);
-    makeDraggable(card); makeResizable(card);
+  const body   = card.querySelector('.widget-body');
+  const canvas = card.querySelector('canvas');
+  const ctx    = canvas.getContext('2d');
+  const state  = { drops:[], grains:[], lastSpawn:0 };
+  const ro = new ResizeObserver(() => {
+    canvas.width  = body.clientWidth;
+    canvas.height = body.clientHeight;
+  });
+  ro.observe(body);
+  card.querySelector('.widget-close').addEventListener('click', e => { e.stopPropagation(); removeWidget(id); });
+
+  const widget = { id, type, card, canvas, ctx, state, ro };
+  widgets.push(widget);
+  makeDraggable(card); makeResizable(card);
+
+  if (!skipArrange) {
+    if (layoutMode === 'manual') {
+      placeWidgetInLargestSpace(card, meta);
+    } else {
+      autoLayout(true);
+    }
   }
 
-  // Position all widgets, then fade the new one in immediately
-  autoLayout(true);
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    card.style.transition = 'opacity .12s ease';
+  if (skipReveal) {
     card.style.opacity = '1';
     card.style.pointerEvents = '';
-    setTimeout(() => { card.style.transition = ''; }, 140);
-  }));
+  } else {
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      card.style.transition = 'opacity .12s ease';
+      card.style.opacity = '1';
+      card.style.pointerEvents = '';
+      setTimeout(() => { card.style.transition = ''; }, 140);
+    }));
+  }
 
   return widget;
 }
@@ -1024,7 +1535,7 @@ function removeWidget(id) {
   setTimeout(() => {
     w.card.remove();
     widgets = widgets.filter(x => x.id !== id);
-    autoLayout(true);
+    if (layoutMode === 'auto') autoLayout(true);
     setTimeout(saveLayout, 250);
   }, 110);
 }
@@ -1032,13 +1543,15 @@ function removeWidget(id) {
 // ── Drag ─────────────────────────────────────────────────────────────────────
 function makeDraggable(card) {
   const header = card.querySelector('.widget-header');
-  let drag = false, ox = 0, oy = 0;
+  let drag = false, ox = 0, oy = 0, startLeft = 0, startTop = 0;
 
   function startDrag(cx, cy) {
     drag = true;
     const br = board.getBoundingClientRect();
     ox = cx - br.left - card.offsetLeft;
     oy = cy - br.top  - card.offsetTop;
+    startLeft = card.offsetLeft;
+    startTop = card.offsetTop;
     card.style.zIndex = ++topZ;
     card.classList.add('dragging');
   }
@@ -1050,9 +1563,13 @@ function makeDraggable(card) {
     card.style.top  = snap(Math.max(0, cy - br.top  - oy)) + 'px';
   }
   function endDrag() {
+    if (!drag) return;
     drag = false; card.classList.remove('dragging');
     card.style.left = snap(card.offsetLeft) + 'px';
     card.style.top  = snap(card.offsetTop)  + 'px';
+    if (card.offsetLeft !== startLeft || card.offsetTop !== startTop) {
+      layoutMode = 'manual';
+    }
   }
 
   header.addEventListener('mousedown', e => {
@@ -1092,7 +1609,13 @@ function makeResizable(card) {
     card.style.width  = snap(Math.max(minW, startW + cx - startX)) + 'px';
     card.style.height = snap(Math.max(minH, startH + cy - startY)) + 'px';
   }
-  function endResize() { resizing = false; }
+  function endResize() {
+    if (!resizing) return;
+    resizing = false;
+    if (card.offsetWidth !== startW || card.offsetHeight !== startH) {
+      layoutMode = 'manual';
+    }
+  }
 
   handle.addEventListener('mousedown', e => {
     startResize(e.clientX, e.clientY);
@@ -1128,452 +1651,11 @@ document.querySelectorAll('.wt-btn').forEach(btn => {
   });
 });
 
-document.getElementById('layout-btn').addEventListener('click', () => autoLayout(true));
-
-// ── First/Then pictogram library ──────────────────────────────────────────────
-const ARASAAC_IMG    = id => `https://static.arasaac.org/pictograms/${id}/${id}_300.png`;
-const WORKER_URL     = 'https://damp-sound-0341.jimmymc89.workers.dev/';
-
-// Map user-typed terms → ARASAAC keywords the DB actually has
-const KEYWORD_MAP = {
-  // Physical spaces
-  gym:             'sport',
-  'pe class':      'physical education',
-  'physical ed':   'physical education',
-  recess:          'playground',
-  bathroom:        'toilet',
-  restroom:        'toilet',
-  'women bathroom':'toilet women',
-  'girl bathroom': 'toilet girl',
-  'boys bathroom': 'toilet boy',
-  'men bathroom':  'toilet man',
-  cafeteria:       'dining room',
-  lunch:           'eating',
-  dinner:          'eating',
-  meal:            'eating',
-  eat:             'eating',
-  food:            'eating',
-  // Daily routines
-  handwash:        'washing hands',
-  handwashing:     'washing hands',
-  'wash hands':    'washing hands',
-  hygiene:         'personal hygiene',
-  brush:           'brushing teeth',
-  'brush teeth':   'brushing teeth',
-  backpack:        'backpack',
-  homework:        'homework',
-  rest:            'relaxation',
-  break:           'break',
-  nap:             'sleep',
-  'rest time':     'relaxation',
-  // Subjects
-  art:             'draw',
-  drawing:         'draw',
-  painting:        'paint',
-  craft:           'draw',
-  math:            'mathematics',
-  maths:           'mathematics',
-  science:         'science',
-  reading:         'reading',
-  writing:         'writing',
-  music:           'music',
-  computer:        'computer',
-  library:         'library',
-  // Services/Therapy
-  speech:          'speech therapy',
-  slp:             'speech therapy',
-  'speech therapy':'speech therapy',
-  ot:              'occupational therapy',
-  'occupational':  'occupational therapy',
-  pt:              'physiotherapy',
-  'physical therapy':'physiotherapy',
-  counseling:      'psychologist',
-  counselor:       'psychologist',
-  nurse:           'nurse',
-  // Rewards/motivators
-  reward:          'prize',
-  prize:           'prize',
-  star:            'star',
-  'free time':     'free time',
-  play:            'playing',
-  game:            'game',
-  ipad:            'tablet',
-  tablet:          'tablet',
-  video:           'television',
-  movie:           'cinema',
-  snack:           'snack',
-  // Transport
-  bus:             'school bus',
-  'school bus':    'school bus',
-  car:             'car',
-  // Emotions
-  happy:           'happy',
-  sad:             'sad',
-  calm:            'relax',
-  angry:           'angry',
-  // Activities
-  transition:      'change',
-  'circle time':   'assembly',
-  'morning meeting':'assembly',
-  centers:         'activity',
-  'group work':    'group work',
-  'independent work':'work',
-  'work time':     'work',
-};
-
-// id, display name, category, extra search keywords
-const PICTO_LIBRARY = [
-  // ── Subjects ──
-  {id:23394, n:'Reading',              c:'subjects',   k:'read book literacy'},
-  {id:8565,  n:'Writing',              c:'subjects',   k:'write pencil journal'},
-  {id:10260, n:'Mathematics',          c:'subjects',   k:'math maths numbers counting'},
-  {id:32542, n:'Science',              c:'subjects',   k:'experiment lab stem'},
-  {id:24791, n:'Music',                c:'subjects',   k:'song singing instruments band choir'},
-  {id:8088,  n:'Art / Drawing',        c:'subjects',   k:'art draw painting craft create'},
-  {id:36139, n:'Art Class',            c:'subjects',   k:'art canvas painting craft studio'},
-  {id:2910,  n:'Computer',             c:'subjects',   k:'technology screen device coding'},
-  {id:6073,  n:'Library',              c:'subjects',   k:'books reading research'},
-  {id:3082,  n:'School',               c:'subjects',   k:'classroom building'},
-  {id:31437, n:'Dance',                c:'subjects',   k:'movement dance drama performing arts'},
-  {id:24797, n:'Film / Media',         c:'subjects',   k:'film movie video media arts'},
-  {id:34705, n:'Instructions',         c:'subjects',   k:'directions follow steps listen'},
-
-  // ── Activities ──
-  {id:37196, n:'Physical Education',   c:'activities', k:'gym pe exercise sport recess playground run fitness'},
-  {id:37843, n:'Snack',                c:'activities', k:'food eat snack morning break'},
-  {id:38477, n:'Lunch / Cafeteria',    c:'activities', k:'lunch eat meal food dinner cafeteria'},
-  {id:38086, n:'Bus',                  c:'activities', k:'transportation ride school bus home'},
-  {id:6929,  n:'Bathroom',             c:'activities', k:'toilet restroom break'},
-  {id:37038, n:'Work Time',            c:'activities', k:'work study desk independent seat'},
-  {id:36257, n:'Group Reading',        c:'activities', k:'read circle time together group'},
-  {id:35990, n:'Circle Time',          c:'activities', k:'morning meeting circle assembly sitting carpet'},
-  {id:6170,  n:'Game',                 c:'activities', k:'play fun choice free time'},
-  {id:9810,  n:'Game Time',            c:'activities', k:'play games fun free choice recess'},
-  {id:29151, n:'iPad / Tablet',        c:'activities', k:'ipad tablet computer technology screen'},
-  {id:37360, n:'Transition',           c:'activities', k:'change move go next switch'},
-  {id:2432,  n:'Go',                   c:'activities', k:'transition move walk leave'},
-  {id:5455,  n:'Finished',             c:'activities', k:'done complete end all done stop'},
-  {id:2369,  n:'Rest Time',            c:'activities', k:'sleep rest relax quiet break nap'},
-  {id:2317,  n:'Home',                 c:'activities', k:'house home go home dismissal after school'},
-  {id:2549,  n:'Watch / Observe',      c:'activities', k:'watch look see television video'},
-  {id:31437, n:'Dance Break',          c:'activities', k:'dance movement brain break'},
-  {id:39677, n:'Welcome',              c:'activities', k:'welcome greeting arrival morning'},
-  {id:39430, n:'Show / Present',       c:'activities', k:'show present share assembly performance'},
-
-  // ── Services ──
-  {id:6142,  n:'Speech Therapy',       c:'services',   k:'speech language talking slp therapy'},
-  {id:6222,  n:'Communication',        c:'services',   k:'aac board talk communicate language'},
-  {id:22791, n:'Occupational Therapy', c:'services',   k:'ot occupational therapy fine motor'},
-  {id:37196, n:'Physical Therapy',     c:'services',   k:'pt physical therapy gross motor exercise'},
-  {id:6929,  n:'Nurse / Health',       c:'services',   k:'nurse health medical doctor sick'},
-  {id:32542, n:'Counseling',           c:'services',   k:'counselor psychologist emotions feelings support'},
-  {id:3082,  n:'Resource Room',        c:'services',   k:'resource special education support pull out'},
-  {id:34705, n:'Testing / Assessment', c:'services',   k:'test assessment evaluation evaluation'},
-
-  // ── Emotions ──
-  {id:2752,  n:'Happy / Great',        c:'emotions',   k:'happy great good excited proud joy'},
-  {id:4629,  n:'Hard / Frustrated',    c:'emotions',   k:'hard frustrated difficult angry upset'},
-  {id:2369,  n:'Tired',                c:'emotions',   k:'tired sleepy exhausted'},
-  {id:5596,  n:'Done / Calm',          c:'emotions',   k:'calm done okay fine neutral'},
-  {id:39677, n:'Excited / Ready',      c:'emotions',   k:'excited happy ready go motivated'},
-
-  // ── Rewards ──
-  {id:2752,  n:'Star / Reward',        c:'rewards',    k:'star prize reward good job incentive sticker'},
-  {id:5596,  n:'All Done',             c:'rewards',    k:'finished complete done reward'},
-  {id:6170,  n:'Free Play',            c:'rewards',    k:'play choice break fun free time reward'},
-  {id:9810,  n:'Games',                c:'rewards',    k:'play fun game choice board game'},
-  {id:29151, n:'Tablet Time',          c:'rewards',    k:'ipad tablet tech screen reward'},
-  {id:38477, n:'Lunch / Special Snack',c:'rewards',    k:'eat food snack treat reward'},
-  {id:24797, n:'Movie / Video',        c:'rewards',    k:'movie film video youtube reward screen'},
-  {id:31437, n:'Dance Party',          c:'rewards',    k:'dance movement brain break reward fun'},
-  {id:2317,  n:'Go Home',              c:'rewards',    k:'home house dismissal early release reward'},
-  {id:2369,  n:'Rest / Break',         c:'rewards',    k:'rest break relax sleep quiet time reward'},
-  {id:8088,  n:'Free Draw / Art',      c:'rewards',    k:'draw art paint color create free reward'},
-  {id:37196, n:'Outside Time',         c:'rewards',    k:'outside recess play run reward gross motor'},
-
-  // ── Routines ──
-  {id:37843, n:'Morning Snack',        c:'routines',   k:'snack eat morning food'},
-  {id:38086, n:'Ride the Bus',         c:'routines',   k:'bus home ride school morning afternoon dismissal'},
-  {id:6929,  n:'Bathroom Break',       c:'routines',   k:'toilet restroom bathroom wash'},
-  {id:22791, n:'Wash Hands',           c:'routines',   k:'handwashing clean hygiene soap'},
-  {id:4631,  n:'Morning Arrival',      c:'routines',   k:'morning school start arrival unpack'},
-  {id:37360, n:'Pack Up',              c:'routines',   k:'backpack bag go home transition end dismissal'},
-  {id:5455,  n:'Finished',             c:'routines',   k:'done complete end finished all done'},
-  {id:2369,  n:'Rest / Quiet Time',    c:'routines',   k:'rest quiet nap sleep relax'},
-  {id:2317,  n:'Go Home',              c:'routines',   k:'home house bus dismissal after school'},
-  {id:2432,  n:'Walk / Line Up',       c:'routines',   k:'walk line up transition hallway go move'},
-  {id:39677, n:'Morning Greeting',     c:'routines',   k:'welcome greeting morning meeting hello'},
-  {id:35990, n:'Sit / Carpet Time',    c:'routines',   k:'sit carpet circle floor assembly'},
-  {id:34705, n:'Follow Directions',    c:'routines',   k:'instructions directions listen follow steps'},
-];
-
-// Resolve keyword → ARASAAC-friendly term, then fetch via Worker proxy
-async function fetchViaWorker(rawQuery) {
-  const mapped = KEYWORD_MAP[rawQuery.toLowerCase()] || rawQuery;
-  try {
-    const res = await fetch(`${WORKER_URL}?q=${encodeURIComponent(mapped)}`);
-    if (!res.ok) return null;
-    const data = await res.json();
-    // ARASAAC returns array of {_id, keywords:[{keyword}]}; normalise to {name, alt_url}
-    if (Array.isArray(data) && data.length) {
-      return data.map(p => ({
-        name:    p.keywords?.[0]?.keyword || mapped,
-        alt_url: ARASAAC_IMG(p._id),
-      }));
-    }
-  } catch {}
-  return null;
-}
-
-// Search filters the local library, then fetches full results via Worker in background
-async function fetchPictograms(query) {
-  return null; // placeholder — loadFtPictograms handles everything
-}
-
-// Default search term per category tab (mapped to real ARASAAC keywords)
-const FT_CAT_TERMS = {
-  all:        'all',
-  subjects:   'school',
-  activities: 'activity',
-  services:   'therapy',
-  emotions:   'emotions',
-  rewards:    'prize',
-  routines:   'routine',
-};
-
-let ftLibTarget = null;
-let ftSearchTimer = null;
-
-function openFtLibrary(btn) {
-  ftLibTarget = btn;
-  let ov = document.getElementById('ft-lib-ov');
-  if (!ov) {
-    ov = document.createElement('div');
-    ov.id = 'ft-lib-ov';
-    ov.className = 'ft-lib-overlay';
-    ov.innerHTML = `
-      <div class="ft-lib-panel">
-        <div class="ft-lib-header">
-          <h3>Choose a pictogram</h3>
-          <button class="ft-lib-close-btn">×</button>
-        </div>
-        <div class="ft-lib-search-row">
-          <input id="ft-lib-search" type="text" placeholder="🔍  Search pictograms..." />
-        </div>
-        <div class="ft-lib-tabs">
-          <button class="ft-lib-tab active" data-cat="all">All</button>
-          <button class="ft-lib-tab" data-cat="subjects">Subjects</button>
-          <button class="ft-lib-tab" data-cat="activities">Activities</button>
-          <button class="ft-lib-tab" data-cat="services">Services</button>
-          <button class="ft-lib-tab" data-cat="emotions">Emotions</button>
-          <button class="ft-lib-tab" data-cat="rewards">Rewards</button>
-          <button class="ft-lib-tab" data-cat="routines">Routines</button>
-        </div>
-        <div class="ft-lib-grid" id="ft-lib-grid"></div>
-        <div class="ft-lib-upload">
-          <button class="ft-upload-btn" id="ft-upload-btn">📁 Use your own image or photo</button>
-          <input type="file" id="ft-file-input" accept="image/*" style="display:none" />
-        </div>
-        <div class="ft-lib-footer">
-          Symbols by <a href="https://arasaac.org" target="_blank">ARASAAC</a>
-          (Sergio Palao / CC BY-NC-SA) via <a href="https://github.com/elelad/SymboTalkAPI" target="_blank">SymboTalk</a>
-        </div>
-      </div>`;
-    document.body.appendChild(ov);
-
-    ov.querySelector('.ft-lib-close-btn').addEventListener('click', closeFtLib);
-    ov.addEventListener('click', e => { if (e.target === ov) closeFtLib(); });
-
-    // Upload your own image
-    const uploadBtn  = ov.querySelector('#ft-upload-btn');
-    const fileInput  = ov.querySelector('#ft-file-input');
-    uploadBtn.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', () => {
-      const file = fileInput.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = e => {
-        if (ftLibTarget) {
-          ftLibTarget.innerHTML = `<img src="${e.target.result}" alt="${file.name}" />`;
-          const inp = ftLibTarget.closest('.ft-panel').querySelector('.ft-text');
-          if (inp && !inp.value) inp.value = file.name.replace(/\.[^.]+$/, '');
-        }
-        closeFtLib();
-        fileInput.value = '';
-      };
-      reader.readAsDataURL(file);
-    });
-
-    // Category tabs
-    ov.querySelectorAll('.ft-lib-tab').forEach(t => t.addEventListener('click', () => {
-      ov.querySelectorAll('.ft-lib-tab').forEach(x => x.classList.remove('active'));
-      t.classList.add('active');
-      ov.querySelector('#ft-lib-search').value = '';
-      loadFtPictograms(FT_CAT_TERMS[t.dataset.cat] || t.dataset.cat);
-    }));
-
-    // Live search
-    ov.querySelector('#ft-lib-search').addEventListener('input', e => {
-      clearTimeout(ftSearchTimer);
-      const q = e.target.value.trim();
-      if (q.length < 2) return;
-      ov.querySelectorAll('.ft-lib-tab').forEach(x => x.classList.remove('active'));
-      ftSearchTimer = setTimeout(() => loadFtPictograms(q), 350);
-    });
-  }
-
-  // Reset to default
-  ov.querySelector('#ft-lib-search').value = '';
-  ov.querySelectorAll('.ft-lib-tab').forEach(t => t.classList.toggle('active', t.dataset.cat==='all'));
-  loadFtPictograms(FT_CAT_TERMS.all);
-  ov.classList.add('open');
-}
-
-function closeFtLib() {
-  const ov = document.getElementById('ft-lib-ov');
-  if (ov) ov.classList.remove('open');
-  ftLibTarget = null;
-}
-
-async function loadFtPictograms(query) {
-  const grid = document.getElementById('ft-lib-grid');
-  if (!grid) return;
-
-  // Show local results immediately, then update with API results if they arrive
-  const showItems = items => {
-    grid.innerHTML = '';
-    if (!items || !items.length) {
-      grid.innerHTML = '<div class="ft-lib-status">No results — try a different search term.</div>';
-      return;
-    }
-    items.forEach(pic => {
-      const name   = pic.name || query;
-      const imgUrl = pic.alt_url || pic.image_url || '';
-      if (!imgUrl) return;
-      const card = document.createElement('button');
-      card.className = 'ft-lib-card';
-      card.innerHTML = `<img src="${imgUrl}" alt="${name}" loading="lazy" /><span class="ft-lib-lbl">${name}</span>`;
-      card.addEventListener('click', () => {
-        if (ftLibTarget) {
-          ftLibTarget.innerHTML = `<img src="${imgUrl}" alt="${name}" />`;
-          const inp = ftLibTarget.closest('.ft-panel').querySelector('.ft-text');
-          if (inp) inp.value = name;
-        }
-        closeFtLib();
-      });
-      grid.appendChild(card);
-    });
-  };
-
-  // Instant local results — search name, category, and keyword list
-  const q = query.toLowerCase();
-  const isAll = q === 'all';
-  const matched = isAll ? PICTO_LIBRARY : PICTO_LIBRARY.filter(p =>
-    p.n.toLowerCase().includes(q) ||
-    p.c === q ||
-    (p.k || '').toLowerCase().includes(q)
-  );
-  // Always show something — fall back to full library if no match
-  const local = (matched.length ? matched : PICTO_LIBRARY)
-    .map(p => ({ name: p.n, alt_url: ARASAAC_IMG(p.id) }));
-
-  showItems(local);
-  if (!isAll) grid.insertAdjacentHTML('afterbegin', `<div class="ft-lib-status" style="grid-column:1/-1;font-size:.65rem;padding:4px 0;opacity:.5">${matched.length ? matched.length+' local results' : 'No exact match — showing all. Searching online…'}</div>`);
-
-  // Fetch via Worker — "All" tab loads multiple categories in parallel for rich grid
-  let remote;
-  if (isAll) {
-    const terms = ['school','routine','activity','therapy','reward','toilet','eating','playing','emotions','prize'];
-    const batches = await Promise.all(terms.map(t => fetchViaWorker(t)));
-    const seen = new Set();
-    remote = batches.flat().filter(p => {
-      if (!p || !p.alt_url || seen.has(p.alt_url)) return false;
-      seen.add(p.alt_url); return true;
-    }).slice(0, 64);
-    if (!remote.length) remote = null;
-  } else {
-    remote = await fetchViaWorker(query);
-  }
-  if (remote && remote.length) {
-    showItems(remote);
-  } else {
-    // Worker returned nothing — keep local results, show hint
-    showItems(local);
-    if (!matched.length) grid.insertAdjacentHTML('afterbegin',
-      `<div class="ft-lib-status" style="grid-column:1/-1;font-size:.6rem;padding:2px 0;opacity:.4">Try different search term</div>`);
-  }
-}
-
-// ── DOM widget: First / Then ──────────────────────────────────────────────────
-function initFirstThen(body) {
-  body.innerHTML = `
-    <div class="ft-widget" id="ftw-${Date.now()}">
-      <button class="ft-layout-btn" title="Toggle layout">⇄</button>
-      <div class="ft-panel ft-first-panel">
-        <div class="ft-done-check">✅</div>
-        <div class="ft-label">FIRST</div>
-        <button class="ft-img-btn" title="Pick activity">🎯</button>
-        <input class="ft-text" placeholder="Activity..." value="Reading" />
-        <button class="ft-done-btn">✓ Done</button>
-      </div>
-      <div class="ft-arrow">→</div>
-      <div class="ft-panel">
-        <div class="ft-label">THEN</div>
-        <button class="ft-img-btn" title="Pick activity">⭐</button>
-        <input class="ft-text" placeholder="Reward..." value="Free time" />
-      </div>
-    </div>`;
-
-  const widget     = body.querySelector('.ft-widget');
-  const firstPanel = body.querySelector('.ft-first-panel');
-  const doneBtn    = body.querySelector('.ft-done-btn');
-  const layoutBtn  = body.querySelector('.ft-layout-btn');
-  let done = false, vertical = false;
-
-  // Layout toggle
-  layoutBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    vertical = !vertical;
-    widget.classList.toggle('vertical', vertical);
-    layoutBtn.textContent = vertical ? '⇅' : '⇄';
-  });
-
-  // Done toggle
-  doneBtn.addEventListener('click', () => {
-    done = !done;
-    firstPanel.classList.toggle('done', done);
-    doneBtn.textContent = done ? '↩ Undo' : '✓ Done';
-    doneBtn.classList.toggle('undone', done);
-  });
-
-  // Image buttons → open library
-  body.querySelectorAll('.ft-img-btn').forEach(btn => {
-    btn.addEventListener('click', e => { e.stopPropagation(); openFtLibrary(btn); });
-  });
-}
-
-// ── DOM widget: Text / Notes ───────────────────────────────────────────────────
-function initText(body) {
-  body.innerHTML = `
-    <div class="text-widget">
-      <div class="text-widget-toolbar">
-        <button class="text-size-btn" data-size="0.9rem">S</button>
-        <button class="text-size-btn active" data-size="1.1rem">M</button>
-        <button class="text-size-btn" data-size="1.5rem">L</button>
-        <button class="text-size-btn" data-size="2.2rem">XL</button>
-      </div>
-      <textarea class="text-editor" placeholder="Type something..."></textarea>
-    </div>`;
-
-  const editor = body.querySelector('.text-editor');
-  body.querySelectorAll('.text-size-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      body.querySelectorAll('.text-size-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      editor.style.fontSize = btn.dataset.size;
-    });
-  });
-}
+document.getElementById('layout-btn').addEventListener('click', () => {
+  layoutMode = 'auto';
+  autoLayout(true);
+  setTimeout(saveLayout, 250);
+});
 
 // ── RAF render loop ───────────────────────────────────────────────────────────
 function loop() {
@@ -1584,10 +1666,30 @@ function loop() {
   if (running && remaining <= 0) {
     running = false; startStamp = null; pausedElapsed = totalSeconds;
     remaining = 0;
-    doneBanner.style.display = 'block';
-    playDone();
-    setInputsDisabled(false);
-    startBtn.textContent = '▶ Start';
+    // The digit block below is skipped once running is false, so it would
+    // otherwise freeze on the previous frame's value (00:00:01)
+    _lastDigitSec = 0;
+    updateDigits(0);
+    playDone();                       // chime fires exactly at zero, always
+    // Narrative widgets get a moment to finish their story before the banner
+    const wantsOutro = widgets.some(w => OUTRO_TYPES.has(w.type));
+    if (wantsOutro) {
+      outroStart = performance.now();
+    } else {
+      finishTimer();
+    }
+  }
+
+  // End of the outro → now show the banner
+  if (outroStart && performance.now() - outroStart >= OUTRO_MS) finishTimer();
+
+  // Live countdown digits — update only when the displayed second changes
+  if (running) {
+    const dispSec = Math.ceil(remaining); // ceiling so 4:59.9 shows 5:00
+    if (dispSec !== _lastDigitSec) {
+      _lastDigitSec = dispSec;
+      updateDigits(dispSec);
+    }
   }
 
   const pct = totalSeconds > 0 ? remaining / totalSeconds : 0;
@@ -1595,7 +1697,6 @@ function loop() {
   // Drive the board ambient colour bloom
   document.documentElement.style.setProperty('--flow-col', timerColors(pct).base + '0d');
   for (const w of widgets) {
-    if (w.dom) continue; // DOM widgets update themselves
     const { canvas:cv, ctx, type, state } = w;
     const W = cv.width, H = cv.height;
     if (W < 10 || H < 10) continue;
@@ -1609,6 +1710,7 @@ function loop() {
       case 'clock':     drawClock(ctx,W,H,pct,col);          break;
       case 'liquid':    drawLiquid(ctx,W,H,pct,col,state);   break;
       case 'hourglass': drawHourglass(ctx,W,H,pct,col,state);break;
+      case 'ufo':       drawUFOTimer(ctx,W,H,pct,col,state);  break;
     }
   }
   requestAnimationFrame(loop);
@@ -1638,7 +1740,7 @@ function drawCircle(ctx, W, H, pct, col) {
 
   // Time text — flat
   const fs=Math.max(16,Math.min(r*0.52,90));
-  ctx.fillStyle=col; ctx.font=`900 ${fs}px -apple-system,sans-serif`;
+  ctx.fillStyle=col; fitFont(ctx, fmt(remaining), r*1.55, fs);
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(fmt(remaining),cx,cy);
 }
@@ -1658,11 +1760,11 @@ function drawBar(ctx, W, H, pct, col) {
   // Time label
   if (tall) {
     const fs=Math.min(W*0.28,H*0.22,80);
-    ctx.fillStyle=col; ctx.font=`900 ${fs}px -apple-system,sans-serif`;
+    ctx.fillStyle=col; fitFont(ctx, fmt(remaining), W*0.90, fs);
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(fmt(remaining),W/2,H*0.18);
   } else {
-    ctx.fillStyle='#fff'; ctx.font=`800 ${Math.min(bh*.5,28)}px -apple-system,sans-serif`;
+    ctx.fillStyle='#fff'; fitFont(ctx, fmt(remaining), W*0.80, Math.min(bh*.5,28), 800);
     ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.fillText(fmt(remaining),W/2,by+bh/2);
   }
@@ -1770,7 +1872,7 @@ function drawDots(ctx, W, H, pct, col) {
 // ── Render: Digital ───────────────────────────────────────────────────────────
 function drawDigital(ctx, W, H, pct, col) {
   const fs=Math.min(W*.38,H*.58,110);
-  ctx.fillStyle=col; ctx.font=`900 ${fs}px -apple-system,sans-serif`;
+  ctx.fillStyle=col; fitFont(ctx, fmt(remaining), W*0.88, fs);
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(fmt(remaining),W/2,H/2);
 }
@@ -1799,214 +1901,661 @@ function drawClock(ctx, W, H, pct, col) {
   }
   ctx.beginPath(); ctx.arc(cx,cy,5,0,Math.PI*2); ctx.fillStyle=col; ctx.fill();
   const fs=Math.max(11,Math.min(r*.28,26));
-  ctx.fillStyle='#f0f4ff'; ctx.font=`700 ${fs}px -apple-system,sans-serif`;
+  ctx.fillStyle='#f0f4ff'; fitFont(ctx, fmt(remaining), r*1.05, fs, 700);
   ctx.textAlign='center'; ctx.textBaseline='middle';
   ctx.fillText(fmt(remaining),cx,cy+r*.45);
 }
 
 // ── Render: Liquid ────────────────────────────────────────────────────────────
 function drawLiquid(ctx, W, H, pct, col, state) {
-  const cw = Math.max(60, W * 0.80);
+  const cw = Math.max(60, Math.min(W * 0.88, 300));
   const ch = H - 20;
   const cx = W / 2;
-  const x0 = cx - cw/2, y0 = 10, pad = 8;
+  const x0 = cx - cw/2, y0 = 10, pad = 9;
   const ix = x0+pad, iw = cw-pad*2, iy = y0+pad, ih = ch-pad*2;
   const elapsed = 1 - pct;
+  const now = performance.now();
 
-  // Smaller pools → more room for the zig-zag section
-  const maxPool = ih * 0.16;
-  const topH    = pct * maxPool;
-  const botH    = elapsed * maxPool;
+  state.drops = state.drops || [];
+
+  // Compact pools — the cascade is the star, not the reservoirs
+  const maxPool  = ih * 0.12;
+  const topH     = pct * maxPool;
+  const botH     = elapsed * maxPool;
+  const topSurfY = iy + topH;
   const botSurfY = iy + ih - botH;
 
-  // ── 4 angled baffles creating the zig-zag path ──────────────────────────────
-  // Even shelves: gap on RIGHT (drops slide left→right, fall off right edge)
-  // Odd shelves:  gap on LEFT  (drops slide right→left, fall off left edge)
-  const gapW  = iw * 0.24;   // open gap at one end
-  const slope = iw * 0.07;   // height drop across the shelf
-  const fracs = [0.22, 0.40, 0.58, 0.76]; // vertical positions as fraction of ih
+  // ── 5 alternating ramps forming the zig-zag ────────────────────────────────
+  // Even: anchored to LEFT wall, open end on RIGHT  → drops roll rightward
+  // Odd:  anchored to RIGHT wall, open end on LEFT  → drops roll leftward
+  // Anchor extends past the wall so the clip cuts it flush (looks attached).
+  const gapW  = iw * 0.26;
+  const slope = iw * 0.10;
+  const fracs = [0.20, 0.34, 0.48, 0.62, 0.76];
 
   const SHELVES = fracs.map((f, i) => {
     const my = iy + f * ih;
-    if (i % 2 === 0) {
-      // Gap on right → shelf from left wall to (right − gap), angled down-right
-      return { x1: ix+4, y1: my, x2: ix+iw-gapW, y2: my+slope, dir: 1 };
-    } else {
-      // Gap on left → shelf from (left + gap) to right wall, angled down-left
-      return { x1: ix+gapW, y1: my+slope, x2: ix+iw-4, y2: my, dir: -1 };
-    }
+    return (i % 2 === 0)
+      ? { ax: ix - 8,       ay: my, bx: ix + iw - gapW, by: my + slope, dir:  1 }
+      : { ax: ix + iw + 8,  ay: my, bx: ix + gapW,      by: my + slope, dir: -1 };
   });
 
-  // ── Glass background ─────────────────────────────────────────────────────────
-  rrect(ctx,x0,y0,cw,ch,20);
-  ctx.fillStyle='rgba(255,255,255,.04)'; ctx.fill();
+  // ── Glass body ─────────────────────────────────────────────────────────────
+  rrect(ctx, x0, y0, cw, ch, 20);
+  ctx.fillStyle = 'rgba(10,16,30,0.80)';
+  ctx.fill();
 
   ctx.save();
-  rrect(ctx,ix,iy,iw,ih,14); ctx.clip();
+  rrect(ctx, ix, iy, iw, ih, 14);
+  ctx.clip();
 
-  // Draw baffles
+  // ── Ramps — solid physical ledges ─────────────────────────────────────────
   SHELVES.forEach(s => {
-    ctx.lineWidth=7; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(s.x1,s.y1); ctx.lineTo(s.x2,s.y2);
-    ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.stroke();
-    ctx.lineWidth=4;
-    ctx.strokeStyle=col+'55'; ctx.stroke();
+    ctx.lineCap = 'round';
+    // Body of the ramp
+    ctx.beginPath(); ctx.moveTo(s.ax, s.ay); ctx.lineTo(s.bx, s.by);
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.stroke();
+    // Wet top edge — thin tint of the timer colour
+    ctx.beginPath(); ctx.moveTo(s.ax, s.ay - 3); ctx.lineTo(s.bx, s.by - 3);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255,255,255,0.26)';
+    ctx.stroke();
   });
 
-  // Spawn drops from bottom of top pool
-  const now = performance.now();
-  const spawnGap = running ? Math.max(350, 1200 * pct) : 99999;
-  if (pct > 0.01 && pct < 0.99 && now - state.lastSpawn > spawnGap) {
+  // ── Spawn a steady cascade ────────────────────────────────────────────────
+  // Constant rate while running so the motion stays lively the whole time;
+  // the pools carry the "how much is left" signal.
+  const spawnGap = 170;
+  if (running && pct > 0.01 && pct < 0.995 &&
+      now - state.lastSpawn > spawnGap && state.drops.length < 44) {
     state.lastSpawn = now;
-    const r = 7 + Math.random() * 8;
+    const r = 6 + Math.random() * 6;
     state.drops.push({
-      x: ix + iw/2 + (Math.random()-.5)*iw*.15,
-      y: iy + topH + r + 2,
-      vx: 0, vy: 0.6, r,
-      phase: 'fall', // 'fall' | 'slide'
-      si: 0, // next shelf index to target
+      x:  ix + iw * (0.16 + Math.random() * 0.44),
+      y:  topSurfY + r,
+      vx: 0, vy: 0.5 + Math.random() * 0.5, r,
+      phase: 'fall',      // 'fall' | 'slide'
+      si: 0,              // shelf index to test from
+      sp: 0,              // current slide speed
     });
   }
 
-  // Update and draw drops
+  // ── Update + draw drops ───────────────────────────────────────────────────
   state.drops = state.drops.filter(d => {
     if (d.phase === 'fall') {
-      d.vy = Math.min(d.vy + 0.20, 8);
+      d.vy = Math.min(d.vy + 0.22, 9);
       d.y += d.vy;
 
-      // Check shelves from current target onward
+      // Land on the first ramp beneath us
       for (let i = d.si; i < SHELVES.length; i++) {
         const s = SHELVES[i];
-        const t = (d.x - s.x1) / (s.x2 - s.x1);
-        if (t >= 0 && t <= 1) {
-          const sy = s.y1 + (s.y2 - s.y1) * t;
-          if (d.y + d.r >= sy) {
-            // Land on baffle
-            d.y = sy - d.r;
-            d.vy = 0;
-            d.vx = s.dir * (2.5 + Math.random() * 1.5);
-            d.phase = 'slide';
-            d.si = i;
-            break;
-          }
+        const lo = Math.min(s.ax, s.bx), hi = Math.max(s.ax, s.bx);
+        if (d.x < lo || d.x > hi) continue;
+        const t  = (d.x - s.ax) / (s.bx - s.ax);
+        const sy = s.ay + (s.by - s.ay) * t;
+        if (d.y + d.r >= sy) {
+          d.y = sy - d.r;
+          d.vy = 0;
+          d.sp = 0.8 + Math.random() * 0.7;
+          d.phase = 'slide';
+          d.si = i;
+          break;
         }
       }
-      if (d.y + d.r >= botSurfY) return false;
 
-    } else if (d.phase === 'slide') {
+    } else {
       const s = SHELVES[d.si];
-      d.x += d.vx;
-      // Follow slope
-      const t = Math.max(0, Math.min(1, (d.x - s.x1)/(s.x2 - s.x1)));
-      d.y = s.y1 + (s.y2 - s.y1) * t - d.r;
-      // Reached open edge → fall off
-      const done = s.dir > 0 ? d.x >= s.x2 : d.x <= s.x1;
-      if (done) {
-        d.phase = 'fall'; d.vy = 0.5; d.vx = 0; d.si++;
+      d.sp = Math.min(d.sp + 0.06, 4.2);   // accelerate down the ramp
+      d.x += s.dir * d.sp;
+      const t = Math.max(0, Math.min(1, (d.x - s.ax) / (s.bx - s.ax)));
+      d.y = s.ay + (s.by - s.ay) * t - d.r;
+      // Tip off the open end
+      if (s.dir > 0 ? d.x >= s.bx : d.x <= s.bx) {
+        d.phase = 'fall'; d.vy = 0.4; d.si++;
       }
     }
 
-    // Draw drop (ellipse + highlight)
+    // Merge into the bottom pool
+    if (d.y - d.r > botSurfY + 2) return false;
+
+    // Teardrop stretch when falling, squash when rolling
+    const k  = d.phase === 'fall' ? 1 + Math.min(d.vy * 0.028, 0.32) : 0.86;
     ctx.beginPath();
-    ctx.ellipse(d.x, d.y, d.r*.68, d.r, 0, 0, Math.PI*2);
-    ctx.fillStyle = col+'e0'; ctx.fill();
+    ctx.ellipse(d.x, d.y, d.r / k, d.r * k, 0, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.fill();
+    // Specular dot
     ctx.beginPath();
-    ctx.ellipse(d.x-d.r*.2, d.y-d.r*.26, d.r*.22, d.r*.28, -.3, 0, Math.PI*2);
-    ctx.fillStyle = 'rgba(255,255,255,.38)'; ctx.fill();
-    return d.y < botSurfY + 10;
+    ctx.ellipse(d.x - d.r*0.26, d.y - d.r*0.28, d.r*0.20, d.r*0.24, -0.3, 0, Math.PI*2);
+    ctx.fillStyle = 'rgba(255,255,255,0.42)';
+    ctx.fill();
+    return true;
   });
 
-  // Draw pools ON TOP of drops so drops emerge/sink naturally
+  // ── Pools drawn OVER drops so they emerge from / sink into the liquid ─────
+  const tw = now / 620;
+
   if (topH > 1) {
-    rrect(ctx,ix,iy,iw,topH,14); ctx.fillStyle=col+'cc'; ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.22)'; ctx.fillRect(ix+2,iy+topH-3,iw-4,3);
+    ctx.beginPath();
+    ctx.moveTo(ix - 2, iy - 4);
+    ctx.lineTo(ix + iw + 2, iy - 4);
+    ctx.lineTo(ix + iw + 2, topSurfY);
+    for (let x = iw; x >= 0; x -= 5) {
+      ctx.lineTo(ix + x, topSurfY + Math.sin(x/19 + tw) * 1.7);
+    }
+    ctx.closePath();
+    ctx.fillStyle = col; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.24)'; ctx.lineWidth = 2; ctx.stroke();
   }
+
   if (botH > 1) {
-    rrect(ctx,ix,botSurfY,iw,botH,14); ctx.fillStyle=col+'cc'; ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.15)'; ctx.fillRect(ix+2,botSurfY,iw-4,3);
+    ctx.beginPath();
+    ctx.moveTo(ix - 2, botSurfY);
+    for (let x = 0; x <= iw; x += 5) {
+      ctx.lineTo(ix + x, botSurfY + Math.sin(x/19 - tw) * 1.7);
+    }
+    ctx.lineTo(ix + iw + 2, iy + ih + 4);
+    ctx.lineTo(ix - 2, iy + ih + 4);
+    ctx.closePath();
+    ctx.fillStyle = col; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.20)'; ctx.lineWidth = 2; ctx.stroke();
   }
 
   ctx.restore();
 
-  // Glass outline + left edge shimmer
-  rrect(ctx,x0,y0,cw,ch,20);
-  ctx.strokeStyle='rgba(255,255,255,.20)'; ctx.lineWidth=2; ctx.stroke();
-  ctx.save(); rrect(ctx,x0,y0,cw,ch,20); ctx.clip();
-  ctx.beginPath(); ctx.moveTo(x0+10,y0+16); ctx.lineTo(x0+10,y0+ch-16);
-  ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=5; ctx.lineCap='round'; ctx.stroke();
+  // ── Glass outline + edge shimmer ──────────────────────────────────────────
+  rrect(ctx, x0, y0, cw, ch, 20);
+  ctx.strokeStyle = 'rgba(255,255,255,0.26)'; ctx.lineWidth = 2; ctx.stroke();
+
+  ctx.save();
+  rrect(ctx, x0, y0, cw, ch, 20); ctx.clip();
+  ctx.beginPath();
+  ctx.moveTo(x0 + 11, y0 + 18); ctx.lineTo(x0 + 11, y0 + ch - 18);
+  ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+  ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.stroke();
   ctx.restore();
 }
 
-// ── Render: Hourglass ────────────────────────────────────────────────────────
-function drawHourglass(ctx, W, H, pct, col, state) {
-  const halfW=Math.min(66,W*.42), neck=6;
-  const cx=W/2, y0=28, bot=H-28, mid=(y0+bot)/2;
-  const elapsed=1-pct;
+// ── Render: Cow Abduction ─────────────────────────────────────────────────────
+// A discrete counter dressed up as a joke: the herd IS the time remaining, so it
+// reads at a glance exactly like Blocks. Cows go left→right, matching the
+// reading direction used by the other timers.
+const UFO_COWS = 10;
 
-  function hw(y) {
-    return y<=mid ? halfW+(neck-halfW)*(y-y0)/(mid-y0)
-                  : neck+(halfW-neck)*(y-mid)/(bot-mid);
-  }
-  function glass() {
+// A chunky, readable cow facing right. (x, y) is the centre of its feet, and h
+// is the full height including the head. Two details do the heavy lifting at
+// small sizes: legs grouped in front/back pairs (evenly spaced legs read as a
+// caterpillar), and a neck wedge tying the head to the shoulder (without it the
+// head floats). Verified legible down to ~32px wide, the real in-widget size.
+function drawCow(ctx, x, y, w, h, col, tilt) {
+  const DARK    = '#0b1120';
+  const bx      = x - w / 2;
+  const bodyW   = w * 0.68;
+  const bodyTop = y - h * 0.78;
+  const bodyBot = y - h * 0.26;
+  const bodyH   = bodyBot - bodyTop;
+  const hw = w * 0.34, hh = h * 0.26;
+  const hx = x + w * 0.06, hy = y - h * 0.95;
+  const LEGS = [0.14, 0.30, 0.68, 0.84];
+
+  ctx.save();
+  if (tilt) { ctx.translate(x, y); ctx.rotate(tilt); ctx.translate(-x, -y); }
+
+  // ── Legs + hooves (behind the body) ──
+  const lw    = Math.max(2, w * 0.078);
+  const hoofH = Math.max(1.2, h * 0.032);
+  ctx.fillStyle = col;
+  LEGS.forEach(f => ctx.fillRect(bx + bodyW * f - lw / 2, bodyBot - 1, lw, h * 0.26 + 1));
+  ctx.fillStyle = DARK;
+  LEGS.forEach(f => ctx.fillRect(bx + bodyW * f - lw / 2, y - hoofH, lw, hoofH));
+
+  // ── Tail + tuft ──
+  const tx = bx - w * 0.015, ty = bodyBot + h * 0.08;
+  ctx.strokeStyle = col;
+  ctx.lineWidth = Math.max(1.6, w * 0.040);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(bx + bodyW * 0.06, bodyTop + bodyH * 0.14);
+  ctx.quadraticCurveTo(bx - w * 0.07, bodyTop + bodyH * 0.60, tx, ty);
+  ctx.stroke();
+  ctx.fillStyle = DARK;
+  ctx.beginPath();
+  ctx.ellipse(tx, ty + h * 0.012, w * 0.036, h * 0.046, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Neck wedge, then body ──
+  ctx.fillStyle = col;
+  ctx.beginPath();
+  ctx.moveTo(bx + bodyW * 0.70, bodyTop + bodyH * 0.08);
+  ctx.lineTo(hx + hw * 0.10, hy + hh * 0.20);
+  ctx.lineTo(hx + hw * 0.40, hy + hh * 1.05);
+  ctx.lineTo(bx + bodyW * 0.88, bodyTop + bodyH * 0.60);
+  ctx.closePath();
+  ctx.fill();
+
+  rrect(ctx, bx, bodyTop, bodyW, bodyH, Math.min(bodyH * 0.40, bodyW * 0.17));
+  ctx.fill();
+
+  // ── Head: a rounded skull plus a snout stepping forward and down.
+  //    Both in the body colour — a dark muzzle patch reads as a beak, and a
+  //    lone nose dot plus an eye reads as two eyes. Shape does the work here,
+  //    leaving exactly one dark mark on the face. ──
+  ctx.beginPath();                                   // ear, behind the skull
+  ctx.ellipse(hx + hw * 0.12, hy + hh * 0.04, hw * 0.17, hh * 0.19, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+  rrect(ctx, hx, hy, hw * 0.70, hh, hh * 0.40);      // skull
+  ctx.fill();
+  rrect(ctx, hx + hw * 0.40, hy + hh * 0.30, hw * 0.60, hh * 0.70, hh * 0.32); // snout
+  ctx.fill();
+
+  ctx.fillStyle = DARK;
+  ctx.beginPath();
+  ctx.arc(hx + hw * 0.34, hy + hh * 0.36, Math.max(0.9, w * 0.024), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();                                   // nostril, small enough to stay a detail
+  ctx.ellipse(hx + hw * 0.88, hy + hh * 0.68, hw * 0.055, hh * 0.09, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Markings — small enough that the colour still dominates ──
+  ctx.beginPath();
+  ctx.ellipse(bx + bodyW * 0.30, bodyTop + bodyH * 0.36, bodyW * 0.10, bodyH * 0.19, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(bx + bodyW * 0.57, bodyTop + bodyH * 0.66, bodyW * 0.072, bodyH * 0.135, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawSaucer(ctx, cx, cy, w, col, phase, scale) {
+  const s = scale === undefined ? 1 : scale;
+  w *= s;
+  const h = w * 0.30;
+  const domePath = () => {
     ctx.beginPath();
-    ctx.moveTo(cx-halfW,y0); ctx.lineTo(cx+halfW,y0);
-    ctx.lineTo(cx+neck,mid); ctx.lineTo(cx+halfW,bot);
-    ctx.lineTo(cx-halfW,bot); ctx.lineTo(cx-neck,mid);
+    ctx.ellipse(cx, cy - h * 0.20, w * 0.27, h * 0.85, 0, Math.PI, 0);
+  };
+  const hullPath = () => {
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, w / 2, h / 2, 0, 0, Math.PI * 2);
+  };
+
+  // Dome
+  domePath();
+  ctx.fillStyle = '#3d5273'; ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.3; ctx.stroke();
+  // Glint on the glass
+  ctx.save();
+  domePath(); ctx.clip();
+  ctx.beginPath();
+  ctx.ellipse(cx - w * 0.10, cy - h * 0.50, w * 0.05, h * 0.30, -0.5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.24)'; ctx.fill();
+  ctx.restore();
+
+  // Hull — neutral slate so the green stays the time signal
+  hullPath();
+  ctx.fillStyle = '#2b3d5e'; ctx.fill();
+  // Darker underside gives the disc some thickness
+  ctx.save();
+  hullPath(); ctx.clip();
+  ctx.fillStyle = '#1b2740';
+  ctx.fillRect(cx - w / 2, cy + h * 0.05, w, h);
+  ctx.restore();
+  hullPath();
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1.5; ctx.stroke();
+
+  // Chasing rim lights, in the timer colour
+  const N = 5, lit = Math.floor(phase * 6) % N;
+  for (let i = 0; i < N; i++) {
+    const lx = cx - w * 0.34 + (w * 0.68) * (i / (N - 1));
+    ctx.beginPath();
+    ctx.arc(lx, cy + h * 0.12, Math.max(1.4, w * 0.032), 0, Math.PI * 2);
+    ctx.fillStyle = i === lit ? col : 'rgba(255,255,255,0.16)';
+    ctx.fill();
+  }
+
+  // Emitter the beam actually comes out of
+  ctx.beginPath();
+  ctx.ellipse(cx, cy + h * 0.40, w * 0.10, h * 0.17, 0, 0, Math.PI * 2);
+  ctx.fillStyle = col; ctx.fill();
+}
+
+function drawUFOTimer(ctx, W, H, pct, col, state) {
+  if (W < 80 || H < 80) return;
+  const now     = performance.now();
+  const elapsed = 1 - pct;
+  const ot      = outroT();                       // 0 unless the finale is playing
+  const groundY = H - Math.max(16, H * 0.12);
+
+  // Stable starfield, regenerated only when the widget is resized
+  if (!state.stars || state.starW !== W || state.starH !== H) {
+    state.starW = W; state.starH = H;
+    const n = Math.max(8, Math.round(W * H / 7000));
+    state.stars = Array.from({ length: n }, () => ({
+      x: Math.random() * W,
+      y: Math.random() * Math.max(10, groundY - 24),
+      r: Math.random() * 1.1 + 0.4,
+      a: Math.random() * 0.35 + 0.12,
+    }));
+  }
+  state.stars.forEach(s => {
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${s.a})`; ctx.fill();
+  });
+
+  // Herd geometry
+  const marginX = Math.max(14, W * 0.06);
+  const spanW   = W - marginX * 2;
+  const cowW    = Math.min(spanW / UFO_COWS * 0.90, Math.max(14, H * 0.20));
+  const cowH    = cowW * 0.78;
+  const cowX    = i => marginX + spanW * ((i + 0.5) / UFO_COWS);
+
+  // Which cow is being taken, and how far along
+  const prog   = Math.min(UFO_COWS, elapsed * UFO_COWS);
+  const done   = Math.min(UFO_COWS, Math.floor(prog));
+  const frac   = Math.min(1, prog - done);
+  const active = done < UFO_COWS ? done : -1;
+
+  const TRAVEL  = 0.30;                            // share of the interval spent flying over
+  const beaming = active >= 0 && frac >= TRAVEL;
+  const riseT   = beaming ? (frac - TRAVEL) / (1 - TRAVEL) : 0;
+
+  // Saucer position — glides to the next cow, then holds while it beams
+  let ufoX;
+  if (active < 0) {
+    ufoX = cowX(UFO_COWS - 1);
+  } else if (frac < TRAVEL) {
+    const from = active === 0 ? cowX(0) : cowX(active - 1);
+    const t = frac / TRAVEL;
+    const e = t * t * (3 - 2 * t);                 // smoothstep
+    ufoX = from + (cowX(active) - from) * e;
+  } else {
+    ufoX = cowX(active);
+  }
+  const hoverY = Math.max(24, groundY - Math.max(64, H * 0.54));
+  let ufoY = hoverY + Math.sin(now / 620) * 3;
+  let ufoScale = 1;
+
+  // Outro: the saucer hangs a beat, then rockets away
+  if (ot > 0) {
+    const t = Math.max(0, (ot - 0.30) / 0.70);
+    ufoY -= t * t * (hoverY + H * 0.5);
+    ufoScale = Math.max(0.15, 1 - t * 0.7);
+  }
+
+  const ufoW = Math.max(38, Math.min(W * 0.26, cowW * 3.0));
+
+  // ── Tractor beam ────────────────────────────────────────────────────────────
+  if (beaming && ot === 0) {
+    const halfTop = ufoW * 0.10, halfBot = cowW * 0.85;
+    const beamTop = ufoY + ufoW * 0.12;   // matches the saucer's emitter
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(ufoX - halfTop, beamTop);
+    ctx.lineTo(ufoX + halfTop, beamTop);
+    ctx.lineTo(ufoX + halfBot, groundY);
+    ctx.lineTo(ufoX - halfBot, groundY);
+    ctx.closePath();
+    ctx.fillStyle = col + '2b';
+    ctx.fill();
+    // Scan lines travelling up the beam
+    ctx.clip();
+    ctx.strokeStyle = col + '55';
+    ctx.lineWidth = 2;
+    const span = groundY - ufoY;
+    for (let k = 0; k < 5; k++) {
+      const p  = ((now / 700 + k / 5) % 1);
+      const yy = groundY - p * span;
+      const hw = halfTop + (halfBot - halfTop) * ((yy - ufoY) / span);
+      ctx.beginPath(); ctx.moveTo(ufoX - hw, yy); ctx.lineTo(ufoX + hw, yy); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── Ground ──────────────────────────────────────────────────────────────────
+  ctx.fillStyle = '#1a2844';
+  ctx.fillRect(0, groundY, W, H - groundY);
+
+  // Grass tufts, laid out once and reused so they don't shimmer between frames
+  if (!state.tufts || state.tuftW !== W) {
+    state.tuftW = W;
+    const n = Math.max(8, Math.round(W / 24));
+    state.tufts = Array.from({ length: n }, (_, i) => ({
+      x: (i + 0.5) * (W / n) + (Math.random() - 0.5) * (W / n) * 0.7,
+      h: 3 + Math.random() * 5,
+      lean: (Math.random() - 0.5) * 2.4,
+    }));
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  state.tufts.forEach(t => {
+    ctx.moveTo(t.x, groundY + 1);
+    ctx.lineTo(t.x + t.lean, groundY - t.h);
+  });
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(W, groundY); ctx.stroke();
+
+  // ── The herd ────────────────────────────────────────────────────────────────
+  for (let i = 0; i < UFO_COWS; i++) {
+    if (i < done) continue;                        // already taken
+    if (i === active && beaming) {
+      // Rising up the beam: eases off the ground, tumbles, shrinks into the hull
+      const lift = riseT * riseT * (3 - 2 * riseT);            // smoothstep
+      const y  = groundY + (ufoY + ufoW * 0.12 - groundY) * lift;
+      const x  = cowX(i) + (ufoX - cowX(i)) * lift;
+      const sc = 1 - lift * 0.42;
+      const wob = Math.sin(riseT * 13) * 0.5 * Math.min(1, riseT * 2.2);
+      ctx.save();
+      ctx.globalAlpha = riseT > 0.82 ? Math.max(0, (1 - riseT) / 0.18) : 1;
+      drawCow(ctx, x, y, cowW * sc, cowH * sc, col, wob);
+      ctx.restore();
+    } else {
+      // Grazing: a gentle idle bob keeps the herd alive
+      const bob = Math.sin(now / 900 + i * 1.7) * (cowH * 0.02);
+      drawCow(ctx, cowX(i), groundY + bob, cowW, cowH, col, 0);
+    }
+  }
+
+  // ── Saucer ──────────────────────────────────────────────────────────────────
+  drawSaucer(ctx, ufoX, ufoY, ufoW, col, now / 260, ufoScale);
+}
+
+// ── Render: Hourglass — curved glass, dome sand pile, stream ─────────────────
+function drawHourglass(ctx, W, H, pct, col, state) {
+  const cx   = W / 2;
+  const capH = 16;
+  const PAD  = 32;
+  const y0   = PAD;
+  const bot  = H - PAD;
+  const mid  = (y0 + bot) / 2;
+  const topH = mid - y0;
+  const botH = bot - mid;
+
+  // Glass dimensions — wide bulges, very narrow neck for drama
+  const halfW = Math.min(W * 0.46, 110);
+  const neck  = 3.5;
+
+  // ── Glass path — classic hourglass curves ─────────────────────────────────
+  // Each half: stays wide, then sweeps sharply to the neck at the midpoint.
+  // Two bezier segments per side. cp1 keeps the wall wide, cp2 arrives at neck.
+  function glassPath() {
+    ctx.beginPath();
+    ctx.moveTo(cx - halfW, y0);
+    ctx.lineTo(cx + halfW, y0);
+
+    // Right: top → neck
+    ctx.bezierCurveTo(
+      cx + halfW,      y0 + topH * 0.50,   // stay wide through the upper half
+      cx + neck + 10,  mid - topH * 0.05,  // curve hard to neck near the waist
+      cx + neck,       mid
+    );
+    // Right: neck → bottom
+    ctx.bezierCurveTo(
+      cx + neck + 10,  mid + botH * 0.05,
+      cx + halfW,      bot - botH * 0.50,
+      cx + halfW,      bot
+    );
+
+    ctx.lineTo(cx - halfW, bot);
+
+    // Left: bottom → neck
+    ctx.bezierCurveTo(
+      cx - halfW,      bot - botH * 0.50,
+      cx - neck - 10,  mid + botH * 0.05,
+      cx - neck,       mid
+    );
+    // Left: neck → top
+    ctx.bezierCurveTo(
+      cx - neck - 10,  mid - topH * 0.05,
+      cx - halfW,      y0 + topH * 0.50,
+      cx - halfW,      y0
+    );
+
     ctx.closePath();
   }
 
-  glass(); ctx.fillStyle='#1a2a3a'; ctx.fill();
-  ctx.save(); glass(); ctx.clip();
+  const elapsed = 1 - pct;
 
-  const yt=y0+(1-pct)*(mid-y0), hwt=hw(yt);
-  if (pct>.002) {
-    ctx.beginPath();
-    ctx.moveTo(cx-hwt,yt); ctx.lineTo(cx+hwt,yt);
-    ctx.lineTo(cx+neck,mid); ctx.lineTo(cx-neck,mid); ctx.closePath();
-    const gt=ctx.createLinearGradient(0,yt,0,mid);
-    gt.addColorStop(0,col+'ee'); gt.addColorStop(1,col+'88');
-    ctx.fillStyle=gt; ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.2)'; ctx.fillRect(cx-hwt+1,yt,(hwt-1)*2,2);
+  // ── Glass interior (dark, semi-transparent) ───────────────────────────────
+  glassPath();
+  ctx.fillStyle = 'rgba(10, 16, 30, 0.88)';
+  ctx.fill();
+
+  // ── Clip sand to glass shape ──────────────────────────────────────────────
+  ctx.save();
+  glassPath();
+  ctx.clip();
+
+  // Top sand — level drops as time runs out
+  // pct=1 → surface at y0 (full); pct=0 → surface at mid (empty)
+  const y_top = y0 + elapsed * topH;
+  if (pct > 0.003) {
+    ctx.fillStyle = col;
+    ctx.fillRect(cx - halfW - 2, y_top, halfW * 2 + 4, mid - y_top + 2);
+    // Crisp surface highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.20)';
+    ctx.fillRect(cx - halfW + 6, y_top, halfW * 2 - 12, 2.5);
   }
 
-  const yb=bot-elapsed*(bot-mid), hwb=hw(yb);
-  if (elapsed>.002) {
+  // Bottom sand pile — grows upward as elapsed increases
+  const pile_h    = elapsed * botH * 0.90;
+  const y_pile    = bot - pile_h;
+  const dome_rise = Math.min(pile_h * 0.22, 16);
+
+  if (elapsed > 0.003) {
+    ctx.fillStyle = col;
+    ctx.fillRect(cx - halfW - 2, y_pile, halfW * 2 + 4, bot - y_pile + 2);
+    // Domed top surface — sand settles in a natural mound
     ctx.beginPath();
-    ctx.moveTo(cx-hwb,yb); ctx.lineTo(cx+hwb,yb);
-    ctx.lineTo(cx+halfW,bot); ctx.lineTo(cx-halfW,bot); ctx.closePath();
-    const gb=ctx.createLinearGradient(0,yb,0,bot);
-    gb.addColorStop(0,col+'ee'); gb.addColorStop(1,col+'88');
-    ctx.fillStyle=gb; ctx.fill();
-    const dh=Math.min(elapsed*12,10);
+    ctx.moveTo(cx - halfW - 2, y_pile);
+    ctx.quadraticCurveTo(cx, y_pile - dome_rise, cx + halfW + 2, y_pile);
+    ctx.fill();
+    // Subtle ridge along the dome crest
     ctx.beginPath();
-    ctx.moveTo(cx-hwb*.8,yb); ctx.quadraticCurveTo(cx,yb-dh,cx+hwb*.8,yb);
-    ctx.strokeStyle='rgba(255,255,255,.22)'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.moveTo(cx - halfW * 0.45, y_pile - dome_rise * 0.38);
+    ctx.quadraticCurveTo(cx, y_pile - dome_rise - 1, cx + halfW * 0.45, y_pile - dome_rise * 0.38);
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
   }
 
-  const now=performance.now();
-  if (running && pct>.01 && pct<.995 && now-state.lastSpawn>90) {
-    state.lastSpawn=now;
-    for(let i=0;i<2;i++) state.grains.push({
-      x:cx+(Math.random()-.5)*neck*.7, y:mid+2, vy:1+Math.random()*1.5, r:1.3+Math.random()*1.2
-    });
+  // ── Sand stream through the neck ─────────────────────────────────────────
+  if (running && pct > 0.012 && pct < 0.99) {
+    const streamEnd = elapsed > 0.003 ? y_pile - dome_rise : bot - 4;
+    // Solid continuous stream — no dash
+    ctx.beginPath();
+    ctx.moveTo(cx, mid + 1);
+    ctx.lineTo(cx, streamEnd);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.setLineDash([]);
+    ctx.stroke();
   }
-  state.grains=state.grains.filter(g=>{
-    g.vy+=.25; g.y+=g.vy;
-    const p=totalSeconds>0?remaining/totalSeconds:0;
-    const stop=bot-(1-p)*(bot-mid)-2;
-    if(g.y>=stop) return false;
-    ctx.beginPath(); ctx.arc(g.x,g.y,g.r,0,Math.PI*2);
-    ctx.fillStyle=timerColor(p)+'f0'; ctx.fill();
+
+  // ── Falling sand grains ───────────────────────────────────────────────────
+  const now = performance.now();
+  if (running && pct > 0.012 && pct < 0.995) {
+    if (now - state.lastSpawn > 55) {
+      state.lastSpawn = now;
+      for (let i = 0; i < 3; i++) {
+        state.grains.push({
+          x:  cx + (Math.random() - 0.5) * neck * 1.8,
+          y:  mid + 3,
+          vy: 1.8 + Math.random() * 2.2,
+          r:  1.2 + Math.random() * 1.0,
+        });
+      }
+    }
+  }
+  const grainStop = elapsed > 0.003 ? y_pile - dome_rise - 1 : bot - 2;
+  state.grains = state.grains.filter(g => {
+    g.vy += 0.32;
+    g.y  += g.vy;
+    if (g.y >= grainStop) return false;
+    ctx.beginPath();
+    ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.fill();
     return true;
   });
+
   ctx.restore();
 
-  glass(); ctx.strokeStyle='rgba(255,255,255,.22)'; ctx.lineWidth=2; ctx.stroke();
-  const capX=cx-halfW-5, capW=halfW*2+10;
-  ctx.fillStyle='#334155';
-  ctx.fillRect(capX,y0-10,capW,10); ctx.fillRect(capX,bot,capW,10);
-  ctx.strokeStyle='rgba(255,255,255,.18)'; ctx.lineWidth=1.5;
-  ctx.strokeRect(capX,y0-10,capW,10); ctx.strokeRect(capX,bot,capW,10);
+  // ── Glass walls — bright crisp outline ────────────────────────────────────
+  glassPath();
+  ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // ── Left-edge highlight — makes the glass read as glassy ─────────────────
+  ctx.save();
+  glassPath();
+  ctx.clip();
+  // Left inner edge of top bulge
+  ctx.beginPath();
+  ctx.moveTo(cx - halfW + 9, y0 + 10);
+  ctx.bezierCurveTo(
+    cx - halfW + 9, y0 + topH * 0.48,
+    cx - neck - 7,  mid - topH * 0.05,
+    cx - neck + 1,  mid
+  );
+  ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+  ctx.lineWidth = 8;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+  // Right-edge secondary highlight (fainter)
+  ctx.beginPath();
+  ctx.moveTo(cx + halfW - 6, y0 + 10);
+  ctx.bezierCurveTo(
+    cx + halfW - 6, y0 + topH * 0.40,
+    cx + neck + 6,  mid - topH * 0.08,
+    cx + neck - 1,  mid
+  );
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 5;
+  ctx.stroke();
+  ctx.restore();
+
+  // ── End caps ─────────────────────────────────────────────────────────────
+  const capW = halfW * 2 + 16;
+  const capX = cx - capW / 2;
+  ctx.fillStyle = '#1e2e42';
+  ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+  ctx.lineWidth = 1.5;
+  rrect(ctx, capX, y0 - capH, capW, capH, 7); ctx.fill(); ctx.stroke();
+  rrect(ctx, capX, bot,       capW, capH, 7); ctx.fill(); ctx.stroke();
+  // Cap top highlights
+  ctx.fillStyle = 'rgba(255,255,255,0.07)';
+  rrect(ctx, capX + 4, y0 - capH + 2, capW - 8, capH * 0.45, 4); ctx.fill();
+  rrect(ctx, capX + 4, bot + 2,        capW - 8, capH * 0.45, 4); ctx.fill();
 }
 
 // ── Timer logic ───────────────────────────────────────────────────────────────
@@ -2015,25 +2564,59 @@ const startBtn    = document.getElementById('start-btn');
 const soundCheck  = document.getElementById('sound-check');
 const soundSelect = document.getElementById('sound-select');
 const digitTimer  = document.getElementById('digit-timer');
-const dgtEls      = [0,1,2,3].map(i => document.getElementById(`d${i}`));
+const dgtEls      = [0,1,2,3,4,5].map(i => document.getElementById(`d${i}`));
 
-function updateDigits() {
-  const m = Math.floor(totalSeconds / 60);
-  const s = totalSeconds % 60;
-  dgtEls[0].textContent = Math.floor(m / 10);
-  dgtEls[1].textContent = m % 10;
-  dgtEls[2].textContent = Math.floor(s / 10);
-  dgtEls[3].textContent = s % 10;
+const MAX_SECONDS = 99 * 3600 + 59 * 60 + 59; // 99:59:59
+
+// ── Outro phase ───────────────────────────────────────────────────────────────
+// Narrative widgets need a beat after zero to finish their story (the saucer
+// flying off, etc). The chime still fires exactly at zero; only the done-banner
+// waits. Timers with no narrative widget on the board are unaffected.
+const OUTRO_MS    = 2500;
+const OUTRO_TYPES = new Set(['ufo']);
+let   outroStart  = 0;               // timestamp the outro began, 0 when idle
+
+// 0 → 1 across the outro; 0 when no outro is playing.
+function outroT() {
+  if (!outroStart) return 0;
+  return Math.min(1, (performance.now() - outroStart) / OUTRO_MS);
+}
+
+function finishTimer() {
+  outroStart = 0;
+  doneBanner.style.display = 'block';
+  setInputsDisabled(false);
+  startBtn.textContent = '▶ Start';
+}
+
+let _lastDigitSec = -1;
+function updateDigits(secs) {
+  // When called without an argument, show the set duration (edit mode)
+  const val = (secs !== undefined) ? secs : totalSeconds;
+  const h = Math.floor(val / 3600);
+  const m = Math.floor(val / 60) % 60;
+  const s = val % 60;
+  dgtEls[0].textContent = Math.floor(h / 10);
+  dgtEls[1].textContent = h % 10;
+  dgtEls[2].textContent = Math.floor(m / 10);
+  dgtEls[3].textContent = m % 10;
+  dgtEls[4].textContent = Math.floor(s / 10);
+  dgtEls[5].textContent = s % 10;
+
+  // Dim leading zeros so the active units read first: 00:05:00
+  const lead = [h < 10, h === 0, h === 0 && m < 10, false, false, false];
+  dgtEls.forEach((el, i) => el.classList.toggle('leading', lead[i]));
 }
 
 function stopTimer() {
   pausedElapsed = getElapsed(); // save where we paused
   running = false; startStamp = null;
+  _lastDigitSec = -1;
 }
 
 function setDuration(secs) {
-  running = false; startStamp = null; pausedElapsed = 0;
-  totalSeconds = Math.max(1, Math.min(secs, 5940));
+  running = false; startStamp = null; pausedElapsed = 0; outroStart = 0;
+  totalSeconds = Math.max(1, Math.min(secs, MAX_SECONDS));
   remaining = totalSeconds;
   doneBanner.style.display = 'none';
   startBtn.textContent = '▶ Start';
@@ -2152,7 +2735,7 @@ startBtn.addEventListener('click', () => {
     startBtn.textContent = '▶ Resume';
     setInputsDisabled(false);
   } else {
-    doneBanner.style.display = 'none';
+    doneBanner.style.display = 'none'; outroStart = 0;
     startStamp = performance.now(); running = true;
     setInputsDisabled(true);
     startBtn.textContent = '⏸ Pause';
@@ -2160,47 +2743,245 @@ startBtn.addEventListener('click', () => {
 });
 
 document.getElementById('reset-btn').addEventListener('click', () => {
-  running = false; startStamp = null; pausedElapsed = 0;
+  running = false; startStamp = null; pausedElapsed = 0; outroStart = 0;
   remaining = totalSeconds;
   widgets.forEach(w => { w.state.drops = []; w.state.grains = []; });
   doneBanner.style.display = 'none'; startBtn.textContent = '▶ Start';
   setInputsDisabled(false);
+  // The RAF loop only drives the digits while running, so put them back by hand
+  _lastDigitSec = -1;
+  updateDigits();
 });
 
 doneBanner.addEventListener('click', () => doneBanner.style.display = 'none');
 
 // ── Background images ─────────────────────────────────────────────────────────
-const BACKGROUNDS = [
+const photoBg = (id, name, cats) => ({ id, name, cats, kind:'photo' });
+const gradientBg = (id, name, cats, value) => ({ id, name, cats, kind:'gradient', value });
+const queryPhotoBg = (id, name, cats, query, lock) => ({ id, name, cats, kind:'query-photo', query, lock });
+function commonsVideoUrl(fileName) {
+  return `https://commons.wikimedia.org/wiki/Special:Redirect/file/${encodeURIComponent(fileName.replaceAll(' ', '_'))}`;
+}
+const animatedBg = (id, name, cats, fileName, fallback) => ({
+  id,
+  name,
+  cats,
+  kind:'animated',
+  src: commonsVideoUrl(fileName),
+  fallback,
+});
+
+const CURATED_PHOTO_BACKGROUNDS = [
   // Nature
-  { id:'photo-1506905925346-21bda4d32df4', name:'Alps',      cat:'nature' },
-  { id:'photo-1441974231531-c6227db76b6e', name:'Forest',    cat:'nature' },
-  { id:'photo-1447752875215-b2761acb3c5d', name:'Mountains', cat:'nature' },
-  { id:'photo-1470770841072-f978cf4d019e', name:'Lake',      cat:'nature' },
-  { id:'photo-1500534314209-a25ddb2bd429', name:'Coast',     cat:'nature' },
-  { id:'photo-1465146344425-f00d5f5c8f07', name:'Meadow',   cat:'nature' },
+  photoBg('photo-1506905925346-21bda4d32df4', 'Alps', ['nature']),
+  photoBg('photo-1441974231531-c6227db76b6e', 'Forest', ['nature']),
+  photoBg('photo-1447752875215-b2761acb3c5d', 'Mountains', ['nature']),
+  photoBg('photo-1470770841072-f978cf4d019e', 'Lake', ['nature', 'water', 'calm']),
+  photoBg('photo-1500534314209-a25ddb2bd429', 'Coast', ['nature', 'water']),
+  photoBg('photo-1472396961693-142e6e269027', 'Pines', ['nature']),
+
+  // Animals
+  photoBg('photo-1757137910091-1cf071030691', 'Fox', ['animals', 'nature']),
+  photoBg('photo-1769470292463-2808d373c35a', 'Elephant', ['animals', 'nature']),
+  photoBg('photo-1514125989062-f7531e2bece3', 'Dolphins', ['animals', 'water', 'nature']),
+  photoBg('photo-1517061391662-b09454c10462', 'Flock', ['animals', 'weather']),
+  photoBg('photo-1775333399471-815c1ff9ddf4', 'Wetlands', ['animals', 'water', 'nature']),
+
+  // Water
+  photoBg('photo-1749784642255-3bc739489b0a', 'Stormfront', ['weather']),
+  photoBg('photo-1748701821466-0b9f8bf839ac', 'Mesocyclone', ['weather', 'nature']),
+
+  // Cities
+  photoBg('photo-1730860702499-ea18918c9359', 'Skyline', ['cities', 'architecture']),
+  photoBg('photo-1508404887525-a12aaa56918f', 'Highrise', ['cities', 'architecture']),
+
+  // Architecture
+  photoBg('photo-1676049938133-c4b5342145f6', 'Stairwell', ['architecture', 'engineering']),
+  photoBg('photo-1563178700-768e43ed2a70', 'Atrium', ['architecture', 'engineering']),
+
   // Space
-  { id:'photo-1419242902214-272b3f66ee7a', name:'Starry',    cat:'space' },
-  { id:'photo-1534796636912-3b6b36f57f53', name:'Aurora',    cat:'space' },
-  { id:'photo-1462331940025-496dfbfc7564', name:'Galaxy',    cat:'space' },
-  { id:'photo-1543722530-d2c3201371e7',    name:'Nebula',    cat:'space' },
-  { id:'photo-1446776811953-b23d57bd21aa', name:'Earth',     cat:'space' },
-  // Abstract
-  { id:'photo-1557682250-33bd709cbe85',    name:'Purple',    cat:'abstract' },
-  { id:'photo-1579546929518-9e396f3cc809', name:'Flow',      cat:'abstract' },
-  { id:'photo-1618005182384-a83a8bd57fbe', name:'Liquid',    cat:'abstract' },
-  { id:'photo-1558618666-fcd25c85cd64',    name:'Colour',    cat:'abstract' },
-  // Calm
-  { id:'photo-1508739773434-c26b3d09e071', name:'Mist',      cat:'calm' },
-  { id:'photo-1501854140801-50d01698950b', name:'Aerial',    cat:'calm' },
-  { id:'photo-1504701954957-2010ec3bcec1', name:'Morning',   cat:'calm' },
-  { id:'photo-1559827260-dc66d52bef19',    name:'Horizon',   cat:'calm' },
-  { id:'photo-1490750967868-88df5691cc5e', name:'Fog',       cat:'calm' },
-  // Warm
-  { id:'photo-1568667256549-094ab04e9877', name:'Autumn',    cat:'warm' },
-  { id:'photo-1477519242566-6ae87c31d212', name:'Desert',    cat:'warm' },
-  { id:'photo-1507003211169-0a1dd7228f2d', name:'Sunset',    cat:'warm' },
-  { id:'photo-1482784160316-6eb046863ece', name:'Dunes',     cat:'warm' },
+  photoBg('photo-1419242902214-272b3f66ee7a', 'Starry', ['space', 'science']),
+  photoBg('photo-1534796636912-3b6b36f57f53', 'Aurora', ['space', 'weather']),
+  photoBg('photo-1462331940025-496dfbfc7564', 'Galaxy', ['space', 'science']),
+  photoBg('photo-1543722530-d2c3201371e7', 'Nebula', ['space', 'science']),
+  photoBg('photo-1446776811953-b23d57bd21aa', 'Earth', ['space', 'science', 'water']),
 ];
+const ACCENT_BACKGROUNDS = [
+  gradientBg('gradient-tidepool', 'Tidepool', ['water', 'calm'], 'radial-gradient(circle at 28% 24%, rgba(255,255,255,0.2), transparent 18%), radial-gradient(circle at 72% 70%, rgba(34,197,94,0.25), transparent 24%), linear-gradient(155deg, #0f172a 0%, #0f766e 48%, #67e8f9 100%)'),
+  gradientBg('gradient-rain-glass', 'Rain Glass', ['water', 'weather', 'calm'], 'radial-gradient(circle at 18% 22%, rgba(255,255,255,0.28), transparent 8%), radial-gradient(circle at 36% 68%, rgba(255,255,255,0.16), transparent 7%), radial-gradient(circle at 78% 34%, rgba(255,255,255,0.22), transparent 9%), linear-gradient(160deg, #0f172a 0%, #1d4ed8 50%, #38bdf8 100%)'),
+  gradientBg('gradient-lightning', 'Lightning', ['weather', 'science'], 'radial-gradient(circle at 76% 22%, rgba(255,255,255,0.22), transparent 14%), linear-gradient(155deg, #020617 0%, #1e293b 40%, #2563eb 70%, #f8fafc 100%)'),
+  gradientBg('gradient-watercolor', 'Watercolor', ['art', 'abstract'], 'radial-gradient(circle at 22% 24%, rgba(244,114,182,0.6), transparent 18%), radial-gradient(circle at 72% 32%, rgba(96,165,250,0.62), transparent 22%), radial-gradient(circle at 48% 78%, rgba(250,204,21,0.46), transparent 18%), linear-gradient(145deg, #fdf2f8 0%, #e0f2fe 100%)'),
+  gradientBg('gradient-stained-glass', 'Stained Glass', ['art', 'science'], 'linear-gradient(60deg, rgba(255,255,255,0.22) 0 2px, transparent 2px), linear-gradient(120deg, rgba(255,255,255,0.18) 0 2px, transparent 2px), linear-gradient(145deg, #0f172a 0%, #0ea5e9 26%, #22c55e 52%, #f59e0b 78%, #ef4444 100%)'),
+  gradientBg('gradient-microscope', 'Microscope', ['science', 'abstract'], 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent 14%), radial-gradient(circle at 44% 58%, rgba(74,222,128,0.26), transparent 18%), radial-gradient(circle at 70% 38%, rgba(96,165,250,0.32), transparent 18%), linear-gradient(160deg, #031525 0%, #0f766e 48%, #86efac 100%)'),
+  gradientBg('gradient-blueprint', 'Blueprint', ['engineering', 'architecture'], 'linear-gradient(90deg, rgba(255,255,255,0.16) 1px, transparent 1px), linear-gradient(rgba(255,255,255,0.16) 1px, transparent 1px), linear-gradient(145deg, #0f172a 0%, #1d4ed8 100%)'),
+  gradientBg('gradient-violet-haze', 'Violet Haze', ['abstract', 'art'], 'radial-gradient(circle at 22% 18%, rgba(255,255,255,0.2), transparent 24%), radial-gradient(circle at 78% 70%, rgba(56,189,248,0.28), transparent 26%), linear-gradient(145deg, #4338ca 0%, #7c3aed 42%, #c026d3 100%)'),
+  gradientBg('gradient-lagoon', 'Lagoon', ['calm', 'water'], 'radial-gradient(circle at 20% 24%, rgba(255,255,255,0.22), transparent 20%), linear-gradient(155deg, #0f766e 0%, #0ea5a4 42%, #bae6fd 100%)'),
+  gradientBg('gradient-sunset', 'Sunset', ['warm', 'weather'], 'radial-gradient(circle at 50% 16%, rgba(255,255,255,0.22), transparent 16%), linear-gradient(180deg, #7c3aed 0%, #db2777 36%, #fb7185 60%, #fdba74 100%)'),
+];
+const ANIMATED_BACKGROUNDS = [
+  animatedBg('animated-aurora-glacier', 'Aurora Glacier', ['animated', 'space', 'weather', 'calm'], 'Glacier Bay Entrance Night Sky with Aurora and Moon.webm', 'linear-gradient(180deg, #061120 0%, #112948 54%, #26415a 100%)'),
+  animatedBg('animated-aurora-salt', 'Salt Flats Aurora', ['animated', 'space', 'weather', 'calm'], 'Shimmer.webm', 'linear-gradient(180deg, #06101c 0%, #1b1840 52%, #30235f 100%)'),
+  animatedBg('animated-desert-stars', 'Desert Night Sky', ['animated', 'space', 'calm'], 'Night Sky Timelapse (30549248476).webm', 'linear-gradient(180deg, #020617 0%, #0b1832 52%, #1e284f 100%)'),
+  animatedBg('animated-cloud-flight', 'Cloud Flight', ['animated', 'weather', 'calm'], 'Flight over clouds.webm', 'linear-gradient(180deg, #27425f 0%, #5f86a4 46%, #d9e6f0 100%)'),
+  animatedBg('animated-river', 'River Canyon', ['animated', 'nature', 'water', 'calm'], 'Clackamas Wild and Scenic River (27973062176).webm', 'linear-gradient(180deg, #0a1d28 0%, #1b3a44 46%, #32585b 100%)'),
+  animatedBg('animated-waterfall', 'Forest Waterfall', ['animated', 'nature', 'water'], 'South Fork Clackamas Wild and Scenic River (28287735390).webm', 'linear-gradient(180deg, #0a1a24 0%, #183126 42%, #355548 100%)'),
+  animatedBg('animated-deep-sea', 'Deep Sea Fish', ['animated', 'animals', 'water', 'science'], 'Ex1402-dive11 fish.webm', 'linear-gradient(180deg, #030d16 0%, #0d2939 48%, #14465d 100%)'),
+  animatedBg('animated-solar', 'Solar Array', ['animated', 'engineering', 'science', 'warm'], '20220810-RD-LSC-0330-Timelapse-5 4K.webm', 'linear-gradient(180deg, #131b2f 0%, #4b3d57 48%, #d58a46 100%)'),
+];
+
+const QUERY_BACKGROUND_SERIES = [
+  {
+    key: 'nature',
+    cats: ['nature'],
+    items: [
+      ['Alpine Lake', 'mountain,lake,alps'], ['Forest Path', 'forest,path'], ['Waterfall', 'waterfall,cliff'],
+      ['Redwood Grove', 'redwood,forest'], ['Canyon Light', 'canyon,desert'], ['Wild Meadow', 'meadow,flowers'],
+      ['Glacier Peak', 'glacier,mountain'], ['Northern Fjord', 'fjord,mountain'], ['Pine Ridge', 'pine,forest,mountain'],
+      ['Moss Creek', 'moss,stream,forest'], ['Sandstone', 'sandstone,canyon'], ['Coastal Cliffs', 'coast,cliffs,ocean'],
+      ['Valley Fog', 'valley,fog,mountain'], ['River Rapids', 'river,rapids,forest']
+    ],
+  },
+  {
+    key: 'animals',
+    cats: ['animals', 'nature'],
+    items: [
+      ['Arctic Fox', 'fox,snow,wildlife'], ['Forest Owl', 'owl,forest,wildlife'], ['Savanna Elephant', 'elephant,savanna,wildlife'],
+      ['Sea Turtle', 'turtle,ocean,reef'], ['Dolphin Arc', 'dolphin,ocean'], ['Stag Woods', 'deer,forest,wildlife'],
+      ['Eagle Peak', 'eagle,mountain'], ['Jungle Tiger', 'tiger,jungle'], ['Bear Meadow', 'bear,forest'],
+      ['Winter Wolf', 'wolf,snow'], ['Leopard Rock', 'leopard,safari'], ['Flamingo Lake', 'flamingo,lagoon'],
+      ['Blue Whale', 'whale,ocean'], ['Butterfly Garden', 'butterfly,flowers,macro']
+    ],
+  },
+  {
+    key: 'water',
+    cats: ['water', 'calm'],
+    items: [
+      ['Ocean Swell', 'ocean,waves'], ['Coral Reef', 'coral,reef,underwater'], ['River Stones', 'river,stones'],
+      ['Waterfall Mist', 'waterfall,mist'], ['Emerald Bay', 'bay,turquoise'], ['Glacier Melt', 'glacier,water'],
+      ['Raindrops', 'raindrops,water,macro'], ['Ice Lake', 'ice,lake,mountain'], ['Tide Pool', 'tidepool,ocean,rocks'],
+      ['Lake Mirror', 'lake,reflection'], ['Sea Cave', 'sea,cave'], ['Kelp Forest', 'kelp,underwater'],
+      ['Misty Harbor', 'harbor,water'], ['Moonlit Surf', 'ocean,moonlight,waves']
+    ],
+  },
+  {
+    key: 'weather',
+    cats: ['weather'],
+    items: [
+      ['Thunderstorm', 'storm,clouds,lightning'], ['Rain Curtain', 'rain,weather'], ['Snow Drift', 'snow,blizzard'],
+      ['Aurora Night', 'aurora,sky'], ['Fog Bank', 'fog,landscape'], ['Rainbow Arc', 'rainbow,storm'],
+      ['Sunbeams', 'sunbeams,clouds'], ['Tornado Sky', 'tornado,clouds'], ['Monsoon Cloud', 'monsoon,clouds'],
+      ['Heat Haze', 'desert,heat,haze'], ['Winter Frost', 'frost,ice'], ['Tempest Sea', 'storm,ocean'],
+      ['Golden Clouds', 'sunset,clouds'], ['Misty Pines', 'fog,forest']
+    ],
+  },
+  {
+    key: 'cities',
+    cats: ['cities', 'architecture'],
+    items: [
+      ['Skyline Night', 'city,skyline,night'], ['Harbor City', 'city,harbor,night'], ['Glass Towers', 'skyscraper,city'],
+      ['Neon District', 'city,neon,street'], ['Aerial Grid', 'city,aerial,night'], ['River Skyline', 'city,river,skyline'],
+      ['Bridge Lights', 'bridge,city,night'], ['Metro Tracks', 'urban,railway,night'], ['Rooftop View', 'city,rooftops'],
+      ['Downtown Dawn', 'city,dawn,skyline'], ['Rainy Street', 'city,rain,street'], ['Skyscraper Glow', 'skyscraper,lights'],
+      ['Waterfront Towers', 'waterfront,city,night'], ['Old Town', 'city,architecture,street']
+    ],
+  },
+  {
+    key: 'architecture',
+    cats: ['architecture', 'engineering'],
+    items: [
+      ['Concrete Form', 'brutalist,architecture'], ['Spiral Stair', 'spiral,stairs,architecture'], ['Steel Bridge', 'steel,bridge'],
+      ['Glass Atrium', 'atrium,architecture'], ['Stone Arch', 'stone,arch'], ['Wooden Hall', 'wooden,interior,architecture'],
+      ['Courtyard Lines', 'courtyard,architecture'], ['Roof Geometry', 'roof,geometry,architecture'], ['Marble Steps', 'marble,stairs'],
+      ['Industrial Beams', 'industrial,architecture'], ['Tunnel Light', 'tunnel,architecture'], ['Facade Pattern', 'facade,building,pattern'],
+      ['Dome Interior', 'dome,architecture'], ['Minimal Wall', 'minimal,architecture,interior']
+    ],
+  },
+  {
+    key: 'art',
+    cats: ['art', 'abstract'],
+    items: [
+      ['Paint Texture', 'paint,texture,macro'], ['Mosaic Wall', 'mosaic,tile'], ['Watercolor Wash', 'watercolor,paint'],
+      ['Stained Glass', 'stained,glass'], ['Ink Pigment', 'ink,pigment'], ['Ceramic Glaze', 'ceramic,glaze'],
+      ['Sculpture Stone', 'sculpture,stone'], ['Textile Weave', 'textile,weave'], ['Paper Collage', 'paper,collage'],
+      ['Color Powder', 'powder,color'], ['Canvas Texture', 'canvas,texture'], ['Chalk Pastel', 'pastel,texture'],
+      ['Fresco Detail', 'fresco,art'], ['Gallery Surface', 'art,gallery,wall']
+    ],
+  },
+  {
+    key: 'science',
+    cats: ['science'],
+    items: [
+      ['Nebula Cloud', 'nebula,space'], ['Microscope Lens', 'microscope,macro'], ['Crystal Growth', 'crystal,mineral'],
+      ['Petri Bloom', 'petri,dish'], ['Lab Glass', 'glassware,laboratory'], ['DNA Model', 'dna,model'],
+      ['Telescope Dome', 'telescope,observatory'], ['Mineral Vein', 'mineral,rock,macro'], ['Ice Crystal', 'snowflake,macro'],
+      ['Prism Light', 'prism,light'], ['Satellite Earth', 'satellite,earth'], ['Solar Surface', 'sun,space'],
+      ['Star Cluster', 'star,cluster,space'], ['Research Screen', 'science,data,screen']
+    ],
+  },
+  {
+    key: 'engineering',
+    cats: ['engineering', 'science'],
+    items: [
+      ['Circuit Board', 'circuit,board'], ['Blueprint Desk', 'blueprint,plan'], ['Bridge Cable', 'bridge,cable'],
+      ['Turbine Blade', 'turbine,engineering'], ['Gear Train', 'gears,metal'], ['Solar Array', 'solar,panel'],
+      ['Wind Farm', 'wind,turbine'], ['Suspension Span', 'suspension,bridge'], ['Control Panel', 'control,panel'],
+      ['Machine Detail', 'engine,metal,macro'], ['Rail Junction', 'rail,tracks,aerial'], ['Industrial Pipe', 'industrial,pipes'],
+      ['Steel Truss', 'steel,truss'], ['Robotics Arm', 'robotics,arm']
+    ],
+  },
+  {
+    key: 'space',
+    cats: ['space', 'science'],
+    items: [
+      ['Galaxy Core', 'galaxy,space'], ['Spiral Nebula', 'nebula,space'], ['Moon Surface', 'moon,craters'],
+      ['Earth Orbit', 'earth,space'], ['Star Field', 'stars,night,sky'], ['Planet Rings', 'saturn,space'],
+      ['Comet Trail', 'comet,space'], ['Milky Way', 'milky way'], ['Deep Space', 'telescope,space'],
+      ['Lunar Horizon', 'moon,horizon'], ['Cosmic Dust', 'cosmic,dust,space'], ['Constellation', 'constellation,sky'],
+      ['Solar Flare', 'solar flare'], ['Planetary Glow', 'planet,space']
+    ],
+  },
+  {
+    key: 'calm',
+    cats: ['calm', 'nature'],
+    items: [
+      ['Misty Lake', 'fog,lake,morning'], ['Soft Dunes', 'dunes,soft light'], ['Quiet Forest', 'forest,mist'],
+      ['Blue Lagoon', 'lagoon,water'], ['Still Snow', 'snow,trees'], ['Cloud Meadow', 'meadow,clouds'],
+      ['Gentle Coast', 'coast,sunrise'], ['Pale Canyon', 'canyon,soft light'], ['Glass Water', 'lake,reflection,mist'],
+      ['Silent Fjord', 'fjord,morning'], ['Dew Field', 'grass,dew,macro'], ['Dawn Hills', 'hills,mist'],
+      ['Hazy Pines', 'pines,fog'], ['Serene River', 'river,morning']
+    ],
+  },
+  {
+    key: 'warm',
+    cats: ['warm', 'nature'],
+    items: [
+      ['Desert Glow', 'desert,sunset'], ['Copper Canyon', 'canyon,sunset'], ['Amber Field', 'wheat,field,sunset'],
+      ['Lava Rock', 'volcanic,rock'], ['Autumn Leaves', 'autumn,forest'], ['Golden Coast', 'sunset,ocean'],
+      ['Sandstone Cliffs', 'sandstone,desert'], ['Orange Dunes', 'dunes,sunset'], ['Sunset Clouds', 'sunset,clouds'],
+      ['Fire Sky', 'red sky sunset'], ['Warm Forest', 'autumn,trees'], ['Ember Lake', 'lake,sunset'],
+      ['Terracotta Wall', 'terracotta,texture,architecture'], ['Golden Ridge', 'mountain,sunset']
+    ],
+  },
+];
+
+function buildQueryBackgrounds() {
+  let lock = 1;
+  return QUERY_BACKGROUND_SERIES.flatMap(series =>
+    series.items.map(([name, query]) =>
+      queryPhotoBg(`query-${series.key}-${lock}`, name, series.cats, query, lock++)
+    )
+  );
+}
+
+const QUERY_PHOTO_BACKGROUNDS = buildQueryBackgrounds();
+const BACKGROUNDS = [...ANIMATED_BACKGROUNDS, ...CURATED_PHOTO_BACKGROUNDS, ...QUERY_PHOTO_BACKGROUNDS, ...ACCENT_BACKGROUNDS];
+const BACKGROUND_MAP = new Map(BACKGROUNDS.map(bg => [bg.id, bg]));
+
+function backgroundMatchesCategory(bg, cat) {
+  if (cat === 'all') return true;
+  const cats = Array.isArray(bg.cats) ? bg.cats : [bg.cat].filter(Boolean);
+  return cats.includes(cat);
+}
 
 let currentBgId = null;
 
@@ -2208,26 +2989,84 @@ function unsplashUrl(id, w, h) {
   return `https://images.unsplash.com/${id}?w=${w}&h=${h}&fit=crop&q=80`;
 }
 
+function queryPhotoUrl(query, lock, w, h) {
+  const encodedQuery = query
+    .split(',')
+    .map(term => encodeURIComponent(term.trim()))
+    .join(',');
+  return `https://loremflickr.com/${w}/${h}/${encodedQuery}?lock=${lock}`;
+}
+
+function cssUrl(url) {
+  return `url("${url.replace(/"/g, '%22')}")`;
+}
+
+function backgroundUrl(bg, w, h) {
+  if (bg.kind === 'animated') return bg.fallback;
+  if (bg.kind === 'gradient') return bg.value;
+  if (bg.kind === 'query-photo') return queryPhotoUrl(bg.query, bg.lock, w, h);
+  return unsplashUrl(bg.id, w, h);
+}
+
+function clearBackgroundMedia() {
+  bgMediaLayer.replaceChildren();
+}
+
+function tryPlayVideo(video) {
+  const maybePromise = video.play();
+  if (maybePromise && typeof maybePromise.catch === 'function') {
+    maybePromise.catch(() => {});
+  }
+}
+
+function mountAnimatedBackground(bg) {
+  clearBackgroundMedia();
+  const video = document.createElement('video');
+  video.className = 'bg-media-video';
+  video.src = bg.src;
+  video.muted = true;
+  video.loop = true;
+  video.autoplay = true;
+  video.playsInline = true;
+  video.preload = 'metadata';
+  video.setAttribute('aria-hidden', 'true');
+  video.addEventListener('loadedmetadata', () => tryPlayVideo(video), { once: true });
+  bgMediaLayer.appendChild(video);
+  tryPlayVideo(video);
+}
+
 function setBackground(id) {
-  currentBgId = id;
-  if (!id) {
+  const bg = id ? BACKGROUND_MAP.get(id) : null;
+  currentBgId = bg ? id : null;
+  if (!bg) {
+    clearBackgroundMedia();
     board.style.backgroundImage = '';
     board.style.backgroundSize  = '';
     board.style.backgroundPosition = '';
+    board.style.backgroundRepeat = '';
     document.body.classList.remove('has-bg');
     document.getElementById('bg-btn').classList.remove('active');
     localStorage.removeItem('bg');
   } else {
-    board.style.backgroundImage    = `url(${unsplashUrl(id,1920,1080)})`;
+    if (bg.kind === 'animated') {
+      board.style.backgroundImage = bg.fallback;
+      mountAnimatedBackground(bg);
+    } else {
+      clearBackgroundMedia();
+      board.style.backgroundImage = bg.kind === 'gradient'
+        ? bg.value
+        : cssUrl(backgroundUrl(bg, 1920, 1080));
+    }
     board.style.backgroundSize     = 'cover';
     board.style.backgroundPosition = 'center';
+    board.style.backgroundRepeat   = 'no-repeat';
     document.body.classList.add('has-bg');
     document.getElementById('bg-btn').classList.add('active');
-    localStorage.setItem('bg', id);
+    localStorage.setItem('bg', bg.id);
   }
   // Update active thumbnail
   document.querySelectorAll('.bg-thumb').forEach(t => {
-    t.classList.toggle('active', t.dataset.id === (id || 'none'));
+    t.classList.toggle('active', t.dataset.id === (currentBgId || 'none'));
   });
 }
 
@@ -2243,16 +3082,38 @@ function renderBgGrid(cat) {
   none.addEventListener('click', () => setBackground(null));
   grid.appendChild(none);
 
-  const list = cat === 'all' ? BACKGROUNDS : BACKGROUNDS.filter(b => b.cat === cat);
+  const list = BACKGROUNDS.filter(bg => backgroundMatchesCategory(bg, cat));
   list.forEach(bg => {
     const tile = document.createElement('div');
-    tile.className = 'bg-thumb' + (currentBgId === bg.id ? ' active' : '');
+    tile.className = 'bg-thumb' + (bg.kind === 'animated' ? ' animated-thumb' : '') + (currentBgId === bg.id ? ' active' : '');
     tile.dataset.id = bg.id;
-    const img = document.createElement('img');
-    img.src = unsplashUrl(bg.id, 300, 168);
-    img.alt = bg.name;
-    img.loading = 'lazy';
-    tile.appendChild(img);
+    tile.style.backgroundImage = bg.kind === 'gradient'
+      ? bg.value
+      : `linear-gradient(180deg, rgba(8,12,20,0.06), rgba(8,12,20,0.06)), ${bg.kind === 'animated' ? backgroundUrl(bg, 400, 240) : cssUrl(backgroundUrl(bg, 400, 240))}`;
+    tile.style.backgroundSize = 'cover';
+    tile.style.backgroundPosition = 'center';
+    tile.setAttribute('role', 'button');
+    tile.setAttribute('aria-label', bg.name);
+    if (bg.kind === 'animated') {
+      const preview = document.createElement('video');
+      preview.className = 'bg-thumb-video';
+      preview.src = bg.src;
+      preview.muted = true;
+      preview.loop = true;
+      preview.playsInline = true;
+      preview.preload = 'metadata';
+      preview.setAttribute('aria-hidden', 'true');
+      tile.appendChild(preview);
+      tile.addEventListener('mouseenter', () => tryPlayVideo(preview));
+      tile.addEventListener('mouseleave', () => {
+        preview.pause();
+        try { preview.currentTime = 0; } catch (e) {}
+      });
+    }
+    const label = document.createElement('span');
+    label.className = 'bg-thumb-label';
+    label.textContent = bg.name;
+    tile.appendChild(label);
     tile.addEventListener('click', () => setBackground(bg.id));
     grid.appendChild(tile);
   });
@@ -2316,11 +3177,12 @@ function initBackground() {
 }
 
 // ── Layout persistence ────────────────────────────────────────────────────────
-const LAYOUT_VERSION = 3; // bump to force reset to default on next load
+const LAYOUT_VERSION = 4;
 
 function saveLayout() {
   const state = {
     v:       LAYOUT_VERSION,
+    mode:    layoutMode,
     widgets: widgets.map(w => ({
       type: w.type,
       left: w.card.style.left,
@@ -2343,8 +3205,10 @@ function restoreLayout() {
       return false;
     }
     if (!Array.isArray(saved.widgets) || !saved.widgets.length) return false;
+    layoutMode = saved.mode === 'manual' ? 'manual' : 'auto';
     saved.widgets.forEach(s => {
-      const widget = createWidget(s.type);
+      if (!WIDGET_META[s.type]) return;   // skip types that no longer exist
+      const widget = createWidget(s.type, { skipArrange: true, skipReveal: true });
       widget.card.style.left   = s.left;
       widget.card.style.top    = s.top;
       widget.card.style.width  = s.w;
