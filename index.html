@@ -277,8 +277,22 @@
       align-items: center;
       justify-content: space-between;
       position: relative;
-      min-height: 74px;          /* holds the row open for the centred numerals */
       z-index: 100;
+
+      /* The numerals are absolutely positioned (see .ctrl-center) so they add
+         NOTHING to this bar's height — the bar has to be told how tall they are.
+         A hardcoded min-height silently broke the moment the steppers grew:
+         the block overflowed the bar equally top and bottom and the bottom row
+         of minuses was clipped off by the edge of the screen. So the height is
+         derived from the parts instead. Every breakpoint that resizes a stepper
+         or a digit must set these vars, not the properties directly. */
+      --dbt-h: 30px;        /* stepper button height  → .dbt min-height */
+      --dgt-h: 2.7rem;      /* digit height (line-height is 1) → .dgt font-size */
+      --dcol-gap: 1px;      /* stepper↔digit gap      → .digit-col gap */
+      --bar-pad: 10px;      /* clear space above and below the digit block */
+      min-height: calc(
+        var(--dbt-h) * 2 + var(--dgt-h) + var(--dcol-gap) * 2 + var(--bar-pad) * 2
+      );
     }
     /* Three real groups: the numerals sit alone in the centre column so they
        land dead centre regardless of how wide the flanking groups are. */
@@ -299,7 +313,7 @@
     }
     .digit-col {
       display: flex; flex-direction: column;
-      align-items: center; gap: 1px;
+      align-items: center; gap: var(--dcol-gap, 1px);
     }
     /* Steppers.
        These were 27x20px resting at 1.50:1 contrast, and only brightened on
@@ -310,18 +324,29 @@
        time by a factor of ten. */
     .dbt {
       background: none; border: none;
-      color: var(--sub); font-size: 0.95rem; font-weight: 700;
+      color: var(--sub); font-size: 1.05rem; font-weight: 700;
       cursor: pointer;
-      min-width: 26px; min-height: 24px; padding: 0 6px;
+      min-width: 32px; min-height: var(--dbt-h, 30px); padding: 0 6px;
       display: flex; align-items: center; justify-content: center;
       border-radius: 7px; line-height: 1; user-select: none;
       transition: color 0.08s, background 0.08s, transform 0.06s;
+    }
+    /* The minus is a hairline glyph and reads as a smaller, less certain target
+       than the plus even at identical box size — which is exactly the button
+       people miss. Draw it as a solid bar so both carry the same weight. */
+    .dbt[data-delta^="-"] { font-size: 0; line-height: 0; }
+    .dbt[data-delta^="-"]::before {
+      content: '';
+      display: block;
+      width: 15px; height: 3px;
+      border-radius: 2px;
+      background: currentColor;
     }
     .dbt:hover  { color: var(--accent); background: var(--s2); }
     .dbt:active { transform: scale(0.8); }
     .dbt:disabled { opacity: 0.25; cursor: default; pointer-events: none; }
     .dgt {
-      font-size: 2.7rem; font-weight: 900;
+      font-size: var(--dgt-h, 2.7rem); font-weight: 900;
       font-variant-numeric: tabular-nums;
       color: var(--text); line-height: 1;
       min-width: 1.6ch; text-align: center;
@@ -332,7 +357,7 @@
     /* Leading zero-hours are dimmed so the eye lands on the active units */
     .dgt.leading { color: #3d4d6e; }
     .digit-sep {
-      font-size: 2.7rem; font-weight: 900;
+      font-size: var(--dgt-h, 2.7rem); font-weight: 900;
       color: var(--s3); line-height: 1;
       padding: 0 1px; margin-top: 2px;
       /* vertically center with the digits, offset for the buttons */
@@ -340,12 +365,12 @@
     }
     /* Six digits need more room than four — scale the bar down on smaller screens */
     @media (max-width: 1500px) {
-      .dgt, .digit-sep { font-size: 2.3rem; }
+      #controls-bar { --dgt-h: 2.3rem; }
       .dbt { min-width: 25px; padding: 0 5px; }
       .ctrl-left { gap: 12px; }
     }
     @media (max-width: 1240px) {
-      .dgt, .digit-sep { font-size: 1.9rem; }
+      #controls-bar { --dgt-h: 1.9rem; }
       .dbt { min-width: 24px; padding: 0 4px; font-size: 0.9rem; }
       .digit-timer { gap: 4px; }
       .ctrl-left { gap: 8px; }
@@ -401,7 +426,7 @@
     }
 
     @media (max-width: 520px) {
-      .dgt, .digit-sep { font-size: 1.6rem; }
+      #controls-bar { --dgt-h: 1.6rem; }
       .dbt { min-width: 24px; padding: 0 4px; font-size: 0.88rem; }
       .digit-timer { gap: 3px; }
       .btn { padding: 9px 14px; font-size: 0.8rem; }
@@ -419,7 +444,9 @@
       /* iPhone SE and similar. Six 40px steppers overflow a 320px screen, so
          they drop to a still-comfortable 32x34 — above the 24px AA minimum,
          below the 44px ideal. Fitting on screen wins over the larger target. */
-      .dbt { min-width: 32px; min-height: 34px; font-size: 0.95rem; }
+      #controls-bar { --dbt-h: 38px; }
+      .dbt { min-width: 34px; font-size: 1.0rem; }
+      .dbt[data-delta^="-"]::before { width: 16px; height: 3px; }
       .digit-timer { gap: 4px; }
       #sound-select { max-width: 58px; }
       .btn { padding: 8px 12px; }
@@ -475,9 +502,11 @@
     @media (max-height: 500px) {
       header { padding: 6px 12px; }
       .logo { font-size: 0.85rem; }
-      #controls-bar { row-gap: 5px; padding: 5px 8px calc(5px + env(safe-area-inset-bottom, 0px)); }
-      .dgt, .digit-sep { font-size: 1.45rem; }
-      .dbt { min-width: 24px; min-height: 24px; padding: 0 4px; font-size: 0.85rem; }
+      #controls-bar {
+        row-gap: 5px; padding: 5px 8px calc(5px + env(safe-area-inset-bottom, 0px));
+        --dgt-h: 1.45rem; --dbt-h: 24px; --bar-pad: 5px;
+      }
+      .dbt { min-width: 24px; padding: 0 4px; font-size: 0.85rem; }
       .btn { padding: 7px 12px; font-size: 0.78rem; }
       .ctrl-left, .ctrl-right { gap: 6px; }
       #done-banner { font-size: 1.05rem; padding: 12px 30px; }
@@ -485,15 +514,46 @@
     }
 
     /* Touch input needs larger grab targets than a mouse pointer */
-    @media (pointer: coarse) {
-      /* Touch: the 44px recommendation, and more room between columns since a
-         fingertip is far wider than a cursor. */
-      .dbt { min-width: 40px; min-height: 40px; font-size: 1.05rem; }
-      .digit-timer { gap: 8px; }
+    /* Coarse input on a phone: generous, but 52px columns won't fit six across. */
+    @media (any-pointer: coarse) and (max-width: 559px) and (min-width: 381px) {
+      .dbt { min-width: 40px; font-size: 1.1rem; }
+      .dbt[data-delta^="-"]::before { width: 18px; height: 3px; }
+      .digit-timer { gap: 5px; }
+      #controls-bar {
+        --dbt-h: 42px;
+        padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      }
+    }
+
+    /* any-pointer, not pointer. A smartboard is a large touchscreen driven by a
+       PC, so its PRIMARY pointer is the mouse and `pointer: coarse` is false —
+       these boards were getting desktop-sized targets. `any-pointer: coarse`
+       matches whenever a coarse input exists at all, which is the real test. */
+    @media (any-pointer: coarse) and (min-width: 560px) {
+      .dbt { min-width: 52px; font-size: 1.3rem; }
+      .dbt[data-delta^="-"]::before { width: 22px; height: 4px; }
+      .digit-timer { gap: 10px; }
+      /* Keep the bottom row of minuses clear of the screen edge — on a
+         wall-mounted board that last row is the hardest thing to hit. */
+      #controls-bar {
+        --dbt-h: 46px; --dcol-gap: 3px; --bar-pad: 14px;
+        padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      }
       .resize-handle { width: 38px; height: 38px; }
       .widget-header { padding-top: 11px; padding-bottom: 11px; }
       .widget-close  { padding: 6px 10px; }
       .bg-close, .overlay-x { padding: 8px 12px; }
+    }
+
+    /* A landscape phone is a coarse pointer at 844px wide, so the smartboard
+       rule above would claim it and hand it 46px steppers — a ~155px bar in a
+       390px-tall viewport. Vertical room wins over target size here; this must
+       stay last so it outranks the coarse blocks. */
+    @media (any-pointer: coarse) and (max-height: 500px) {
+      #controls-bar { --dbt-h: 26px; --dgt-h: 1.45rem; --dcol-gap: 1px; --bar-pad: 5px; }
+      .dbt { min-width: 34px; font-size: 0.9rem; }
+      .dbt[data-delta^="-"]::before { width: 15px; height: 3px; }
+      .digit-timer { gap: 5px; }
     }
     /* ── Board controls ──────────────────────────────────────────────────────
        One shared style so Background / Fullscreen / Arrange read as a set, with
@@ -2671,59 +2731,74 @@ const SHEEP_COUNT = 10;
 function drawSheepBody(ctx, x, y, w, h, col, step, stride = 1, graze = 0, flip = false) {
   // Head and legs take a darkened tint of the timer colour — near-black vanishes
   // against the night hills, and this keeps the whole animal on-palette.
-  const DARK  = lerpHex(col, '#0b1120', 0.30);
-  const bodyW = w * 0.66, bodyH = h * 0.44;
-  const bx = x - w / 2, byTop = y - h * 0.78, byBot = byTop + bodyH;
+  const DARK  = lerpHex(col, '#0b1120', 0.32);
+  const bodyW = w * 0.64, bodyH = h * 0.46;
+  const bx = x - w / 2, byTop = y - h * 0.80, byBot = byTop + bodyH;
   const legH = y - byBot;
 
   ctx.save();
-  // Mirror about its own centre so it faces the way it's walking
   if (flip) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
 
-  // Legs: chunky and rounded. Swing scales with real speed, so a grazing sheep
-  // stands still rather than marching on the spot.
-  const lw = Math.max(2.2, w * 0.088);
+  // Short stubby legs — the shorter they are against the body, the cuter it reads
+  const lw = Math.max(2.4, w * 0.098);
   ctx.fillStyle = DARK;
-  [[0.16, 1], [0.34, -1], [0.66, -1], [0.84, 1]].forEach(([f, dir]) => {
+  [[0.20, 1], [0.38, -1], [0.64, -1], [0.82, 1]].forEach(([f, dir]) => {
     ctx.save();
     ctx.translate(bx + bodyW * f, byBot);
     ctx.rotate(Math.sin(step) * dir * 0.075 * stride);
-    rrect(ctx, -lw / 2, -lw * 0.3, lw, legH + lw * 0.3, lw * 0.45);
+    rrect(ctx, -lw / 2, -lw * 0.3, lw, legH + lw * 0.3, lw * 0.5);
     ctx.fill();
     ctx.restore();
   });
 
-  // Fleece: overlapping circles round the body into a bumpy cloud
+  // Fleece: a ring of small puffs around an ellipse, so the outline is bumpy all
+  // the way round rather than a few big lobes.
+  const cxp = bx + bodyW * 0.50, cyp = byTop + bodyH * 0.46;
+  const rx = bodyW * 0.54, ry = bodyH * 0.50;
   ctx.fillStyle = col;
-  [[0.16, 0.46, 0.25], [0.38, 0.26, 0.29], [0.62, 0.28, 0.28], [0.84, 0.48, 0.24],
-   [0.50, 0.62, 0.26], [0.26, 0.68, 0.22], [0.72, 0.68, 0.22]].forEach(([fx, fy, r]) => {
+  const PUFFS = 13;
+  for (let i = 0; i < PUFFS; i++) {
+    const a = (i / PUFFS) * Math.PI * 2;
+    const pr = (0.155 + 0.055 * Math.sin(i * 2.7)) * w * 0.5;
     ctx.beginPath();
-    ctx.arc(bx + bodyW * fx, byTop + bodyH * fy, w * r * 0.5, 0, Math.PI * 2);
+    ctx.arc(cxp + Math.cos(a) * rx * 0.86, cyp + Math.sin(a) * ry * 0.80, pr, 0, Math.PI * 2);
     ctx.fill();
-  });
-  rrect(ctx, bx + bodyW * 0.06, byTop + bodyH * 0.16, bodyW * 0.88, bodyH * 0.80, bodyH * 0.40);
+  }
+  ctx.beginPath();
+  ctx.ellipse(cxp, cyp, rx * 0.92, ry * 0.92, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // Head, overlapping the fleece so it reads as attached rather than stuck on
-  const hw = w * 0.34, hh = h * 0.34;
-  const hx = bx + bodyW * 0.74, hy = byTop + bodyH * 0.20;
+  const hw = w * 0.36, hh = h * 0.36;
+  const hx = bx + bodyW * 0.72, hy = byTop + bodyH * 0.14;
   ctx.save();
   if (graze > 0.001) {
-    // Mostly a drop with a slight tilt. A large rotation swings the muzzle out
+    // Mostly a drop with a slight tilt — a large rotation swings the muzzle out
     // past the body and the head reads as having fallen off.
     ctx.translate(graze * hw * 0.22, graze * h * 0.25);
     const px = hx + hw * 0.15, py = hy + hh * 0.5;
     ctx.translate(px, py); ctx.rotate(graze * 0.42); ctx.translate(-px, -py);
   }
   ctx.fillStyle = DARK;
-  ctx.beginPath();                                   // ear, clear of the skull
-  ctx.ellipse(hx + hw * 0.14, hy + hh * 0.04, hw * 0.30, hh * 0.19, -0.75, 0, Math.PI * 2);
-  ctx.fill();
-  rrect(ctx, hx, hy, hw, hh * 0.86, hw * 0.40); ctx.fill();                  // skull
-  rrect(ctx, hx + hw * 0.42, hy + hh * 0.34, hw * 0.62, hh * 0.44, hh * 0.20); ctx.fill(); // muzzle
-  ctx.fillStyle = '#f4f7ff';
   ctx.beginPath();
-  ctx.arc(hx + hw * 0.46, hy + hh * 0.32, Math.max(1.0, w * 0.026), 0, Math.PI * 2);
+  ctx.ellipse(hx + hw * 0.10, hy + hh * 0.16, hw * 0.26, hh * 0.20, -0.85, 0, Math.PI * 2);
+  ctx.fill();                                                                  // ear
+  rrect(ctx, hx + hw * 0.02, hy + hh * 0.06, hw * 0.92, hh * 0.80, hw * 0.42); ctx.fill(); // skull
+  rrect(ctx, hx + hw * 0.44, hy + hh * 0.36, hw * 0.60, hh * 0.44, hh * 0.22); ctx.fill(); // muzzle
+  // Fleecy forelock tufts over the brow
+  ctx.fillStyle = col;
+  [[0.16, -0.02, 0.20], [0.42, -0.09, 0.23], [0.68, -0.01, 0.18]].forEach(([dx, dy, r]) => {
+    ctx.beginPath();
+    ctx.arc(hx + hw * dx, hy + hh * dy, hw * r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // A bigger eye with a pupil does most of the work of making it look friendly
+  ctx.fillStyle = '#f7faff';
+  ctx.beginPath();
+  ctx.arc(hx + hw * 0.50, hy + hh * 0.36, Math.max(1.2, w * 0.036), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#101a2e';
+  ctx.beginPath();
+  ctx.arc(hx + hw * 0.52, hy + hh * 0.37, Math.max(0.6, w * 0.018), 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();   // head
   ctx.restore();   // facing
@@ -2731,41 +2806,67 @@ function drawSheepBody(ctx, x, y, w, h, col, step, stride = 1, graze = 0, flip =
 
 // The sheepdog: low, dark, pointed ears and a raised tail.
 function drawDog(ctx, x, y, w, h, step) {
-  const bodyW = w * 0.74, bodyH = h * 0.40;
-  const bx = x - w / 2, byTop = y - h * 0.72;
-  ctx.fillStyle = '#7286aa';
-  const lw = Math.max(1.4, w * 0.06);
-  [[0.24, 1], [0.72, -1]].forEach(([f, dir]) => {
+  // A border collie: four legs, a plumed tail, pricked ears and a small white
+  // chest patch. The old one was a two-legged slab and read as a generic animal.
+  const DK = '#4a5f8a', LT = '#dce6f5';
+  const bodyW = w * 0.72, bodyH = h * 0.38;
+  const bx = x - w / 2, byTop = y - h * 0.68, byBot = byTop + bodyH;
+  const legH = y - byBot;
+
+  ctx.fillStyle = DK;
+  const lw = Math.max(1.8, w * 0.075);
+  [[0.22, 1], [0.34, 1], [0.70, -1], [0.82, -1]].forEach(([f, dir]) => {
     ctx.save();
-    ctx.translate(bx + bodyW * f, byTop + bodyH);
-    ctx.rotate(Math.sin(step) * dir * 0.30);
-    ctx.fillRect(-lw / 2, 0, lw, h * 0.30);
+    ctx.translate(bx + bodyW * f, byBot);
+    ctx.rotate(Math.sin(step) * dir * 0.34);
+    rrect(ctx, -lw / 2, -lw * 0.3, lw, legH + lw * 0.3, lw * 0.5);
+    ctx.fill();
     ctx.restore();
   });
-  rrect(ctx, bx, byTop, bodyW, bodyH, bodyH * 0.44);
-  ctx.fill();
-  // Tail up
-  ctx.strokeStyle = '#7286aa';
-  ctx.lineWidth = Math.max(1.4, w * 0.055);
+
+  // Plumed tail, carried up
+  ctx.strokeStyle = DK;
+  ctx.lineWidth = Math.max(2.4, w * 0.095);
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(bx + bodyW * 0.04, byTop + bodyH * 0.35);
-  ctx.quadraticCurveTo(bx - w * 0.10, byTop - h * 0.05, bx + w * 0.02, byTop - h * 0.16);
+  ctx.moveTo(bx + bodyW * 0.06, byTop + bodyH * 0.42);
+  ctx.bezierCurveTo(bx - w * 0.07, byTop + bodyH * 0.28,
+                    bx - w * 0.09, byTop - h * 0.08,
+                    bx + w * 0.02, byTop - h * 0.20);
   ctx.stroke();
-  // Head + pricked ear
-  const hw = w * 0.26, hh = h * 0.24;
-  const hx = bx + bodyW * 0.80, hy = byTop - hh * 0.42;
-  rrect(ctx, hx, hy, hw, hh, hw * 0.34);
+
+  rrect(ctx, bx, byTop, bodyW, bodyH, bodyH * 0.46);
+  ctx.fill();
+  // Small chest patch, low and forward — a marking rather than a badge
+  ctx.fillStyle = LT;
+  ctx.beginPath();
+  ctx.ellipse(bx + bodyW * 0.84, byTop + bodyH * 0.80, bodyW * 0.10, bodyH * 0.22, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const hw = w * 0.30, hh = h * 0.26;
+  const hx = bx + bodyW * 0.76, hy = byTop - hh * 0.40;
+  ctx.fillStyle = DK;
+  [[0.14, -0.34], [0.44, -0.06]].forEach(([ex, tilt]) => {   // pricked ears
+    ctx.save();
+    ctx.translate(hx + hw * ex, hy + hh * 0.18);
+    ctx.rotate(tilt);
+    ctx.beginPath();
+    ctx.moveTo(-hw * 0.12, hh * 0.16);
+    ctx.lineTo(0, -hh * 0.44);
+    ctx.lineTo(hw * 0.14, hh * 0.14);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  });
+  rrect(ctx, hx, hy, hw * 0.82, hh, hw * 0.36); ctx.fill();                    // skull
+  rrect(ctx, hx + hw * 0.58, hy + hh * 0.34, hw * 0.40, hh * 0.44, hh * 0.18); ctx.fill(); // snout
+  ctx.fillStyle = LT;
+  rrect(ctx, hx + hw * 0.72, hy + hh * 0.40, hw * 0.26, hh * 0.32, hh * 0.14); ctx.fill(); // muzzle tip
+  ctx.fillStyle = '#101a2e';
+  ctx.beginPath();
+  ctx.ellipse(hx + hw * 0.94, hy + hh * 0.52, hw * 0.07, hh * 0.08, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.moveTo(hx + hw * 0.16, hy + hh * 0.12);
-  ctx.lineTo(hx + hw * 0.02, hy - hh * 0.44);
-  ctx.lineTo(hx + hw * 0.52, hy + hh * 0.06);
-  ctx.closePath();
-  ctx.fill();
-  // Muzzle
-  ctx.fillStyle = '#c3d0e4';
-  rrect(ctx, hx + hw * 0.58, hy + hh * 0.44, hw * 0.52, hh * 0.36, hh * 0.16);
+  ctx.arc(hx + hw * 0.50, hy + hh * 0.40, Math.max(0.9, w * 0.030), 0, Math.PI * 2);
   ctx.fill();
 }
 
