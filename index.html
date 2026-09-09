@@ -2071,7 +2071,14 @@ function loop() {
 
 // ── Render: Circle ────────────────────────────────────────────────────────────
 function drawCircle(ctx, W, H, pct, col) {
-  const cx=W/2, cy=H/2, r=Math.min(W,H)/2-26;
+  const cx=W/2, cy=H/2, half=Math.min(W,H)/2;
+  // A stroke straddles its own path, so the ring actually reaches r + lw/2 —
+  // and lw scales with r while the 26px margin below does not. Past r ≈ 400
+  // (a circle about 800px across, i.e. a classroom display or fullscreen) the
+  // stroke outgrew the margin and the ring was clipped by the canvas edge.
+  // Solve for the largest r whose stroke still fits: r + (0.13r + pulse)/2 + 4 ≤ half.
+  const PULSE = 2;                                   // max urgency wobble, added below
+  const r = Math.min(half - 26, (half - 4 - PULSE/2) / 1.065);
   if (r < 10) return;
   // Pulse ring thickness in final 10% for urgency
   const urgencyPulse = pct < 0.1 ? Math.sin(performance.now()/120)*2 : 0;
