@@ -1474,12 +1474,24 @@
 let totalSeconds  = 5 * 60;
 let remaining     = totalSeconds; // updated every RAF frame — fractional
 let running       = false;
-let startStamp    = null;   // performance.now() when last started/resumed
+let startStamp    = null;   // NOW() when last started/resumed
 let pausedElapsed = 0;      // seconds elapsed at last pause
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+// Every animation in this file reads the time through NOW() rather than calling
+// performance.now() directly. On the live site the two are identical. The video
+// exporter overrides virtualNow to step time forward by exactly one frame at a
+// time, so a 30-minute timer can be rendered as fast as the machine can draw it
+// instead of in 30 real minutes — and every frame lands on an exact timestamp
+// rather than wherever the display's refresh happened to fall.
+let virtualNow = null;      // null = follow the wall clock
+function NOW() {
+  return virtualNow === null ? performance.now() : virtualNow;
+}
 
 function getElapsed() {
   if (!running || startStamp === null) return pausedElapsed;
-  return pausedElapsed + (performance.now() - startStamp) / 1000;
+  return pausedElapsed + (NOW() - startStamp) / 1000;
 }
 function getPreciseRemaining() {
   return Math.max(0, totalSeconds - getElapsed());
@@ -1807,6 +1819,37 @@ function rrect(ctx, x, y, w, h, r) {
 }
 
 // ── Create widget ─────────────────────────────────────────────────────────────
+// ── Render resolution ─────────────────────────────────────────────────────────
+// One knob for how many device pixels we draw per logical pixel. Normally this
+// is the display's own ratio; the offscreen video exporter sets it to 2 or 3 to
+// render the very same scenes at 1440p/4K without touching any drawing code.
+// Capped at 3 — beyond that the memory cost climbs (a fullscreen board at 3x is
+// already ~8M pixels) and flat colour graphics gain nothing visible.
+let exportScale = 0;                      // 0 = follow the display
+function renderScale() {
+  return exportScale || Math.min(window.devicePixelRatio || 1, 3);
+}
+
+function sizeCanvas(w) {
+  const body = w.card.querySelector('.widget-body');
+  const lw = body.clientWidth, lh = body.clientHeight;
+  const dpr = renderScale();
+  let s = dpr;
+  // Fill-rate guard. A 5K display fullscreen at 2x is ~13M pixels a frame, which
+  // is more than a school laptop wants to push at 60fps. Step the scale down
+  // rather than drop frames; flat colour graphics degrade gracefully. The
+  // exporter opts out — it is not running at 60fps and wants every pixel.
+  if (!exportScale) while (s > 1 && lw * lh * s * s > 12e6) s -= 0.5;
+  // Track the display ratio separately from the ratio we actually applied: when
+  // the guard clamps them apart, comparing the applied one would re-enter this
+  // function every frame and thrash layout via clientWidth.
+  w.dpr = dpr;
+  if (lw === w.lw && lh === w.lh && s === w.scale) return;
+  w.lw = lw; w.lh = lh; w.scale = s;
+  w.canvas.width  = Math.round(lw * s);
+  w.canvas.height = Math.round(lh * s);
+}
+
 function createWidget(type, options = {}) {
   const { skipArrange = false, skipReveal = false } = options;
   const meta = WIDGET_META[type];
@@ -1832,14 +1875,18 @@ function createWidget(type, options = {}) {
   const canvas = card.querySelector('canvas');
   const ctx    = canvas.getContext('2d');
   const state  = { drops:[], grains:[], lastSpawn:0 };
-  const ro = new ResizeObserver(() => {
-    canvas.width  = body.clientWidth;
-    canvas.height = body.clientHeight;
-  });
+  const widget = { id, type, card, canvas, ctx, state, ro: null, lw: 0, lh: 0, scale: 1, dpr: 0 };
+
+  // Size the backing store in DEVICE pixels, then scale the context so all the
+  // drawing code keeps working in logical pixels. Without this the canvas was
+  // sized in CSS pixels and stretched by `width:100%` — so on a 2x Retina
+  // screen every timer was drawn at half the display's real resolution and
+  // upsampled, which is what made the circle's edge and the digits look soft.
+  const ro = new ResizeObserver(() => sizeCanvas(widget));
+  widget.ro = ro;
   ro.observe(body);
   card.querySelector('.widget-close').addEventListener('click', e => { e.stopPropagation(); removeWidget(id); });
 
-  const widget = { id, type, card, canvas, ctx, state, ro };
   widgets.push(widget);
   makeDraggable(card); makeResizable(card);
 
@@ -2016,14 +2063,14 @@ function loop() {
     // Narrative widgets get a moment to finish their story before the banner
     const wantsOutro = widgets.some(w => OUTRO_TYPES.has(w.type));
     if (wantsOutro) {
-      outroStart = performance.now();
+      outroStart = NOW();
     } else {
       finishTimer();
     }
   }
 
   // End of the outro → now show the banner
-  if (outroStart && performance.now() - outroStart >= OUTRO_MS) finishTimer();
+  if (outroStart && NOW() - outroStart >= OUTRO_MS) finishTimer();
 
   // Mirror the main controls onto the floating fullscreen bar
   if (document.body.classList.contains('presenting')) {
@@ -2049,24 +2096,36 @@ function loop() {
   document.documentElement.style.setProperty('--flow-col', timerColors(pct).base + '0d');
   for (const w of widgets) {
     const { canvas:cv, ctx, type, state } = w;
-    const W = cv.width, H = cv.height;
+    // Dragging the window onto a different display (laptop → smartboard) changes
+    // devicePixelRatio without firing a resize, so re-check it here; sizeCanvas
+    // is a no-op unless something actually changed.
+    if (w.dpr !== renderScale()) sizeCanvas(w);
+    const W = w.lw, H = w.lh;              // logical pixels — drawing code is unchanged
     if (W < 10 || H < 10) continue;
+    ctx.setTransform(w.scale, 0, 0, w.scale, 0, 0);
     ctx.clearRect(0, 0, W, H);
-    switch (type) {
-      case 'circle':    drawCircle(ctx,W,H,pct,col);        break;
-      case 'bar':       drawBar(ctx,W,H,pct,col);            break;
-      case 'blocks':    drawBlocks(ctx,W,H,pct,col);         break;
-      case 'dots':      drawDots(ctx,W,H,pct,col);           break;
-      case 'digital':   drawDigital(ctx,W,H,pct,col);        break;
-      case 'clock':     drawClock(ctx,W,H,pct,col);          break;
-      case 'liquid':    drawLiquid(ctx,W,H,pct,col,state);   break;
-      case 'hourglass': drawHourglass(ctx,W,H,pct,col,state);break;
-      case 'ufo':       drawUFOTimer(ctx,W,H,pct,col,state);  break;
-      case 'candle':    drawCandle(ctx,W,H,pct,col,state);    break;
-      case 'sheep':     drawSheep(ctx,W,H,pct,col,state);     break;
-    }
+    drawTimer(type, ctx, W, H, pct, col, state);
   }
   requestAnimationFrame(loop);
+}
+
+// One dispatch table for every timer, shared by the live RAF loop and the
+// offscreen video exporter. Keeping it in one place means a timer added here
+// shows up in exports automatically instead of silently rendering nothing.
+function drawTimer(type, ctx, W, H, pct, col, state) {
+  switch (type) {
+    case 'circle':    drawCircle(ctx,W,H,pct,col);          break;
+    case 'bar':       drawBar(ctx,W,H,pct,col);             break;
+    case 'blocks':    drawBlocks(ctx,W,H,pct,col);          break;
+    case 'dots':      drawDots(ctx,W,H,pct,col);            break;
+    case 'digital':   drawDigital(ctx,W,H,pct,col);         break;
+    case 'clock':     drawClock(ctx,W,H,pct,col);           break;
+    case 'liquid':    drawLiquid(ctx,W,H,pct,col,state);    break;
+    case 'hourglass': drawHourglass(ctx,W,H,pct,col,state); break;
+    case 'ufo':       drawUFOTimer(ctx,W,H,pct,col,state);  break;
+    case 'candle':    drawCandle(ctx,W,H,pct,col,state);    break;
+    case 'sheep':     drawSheep(ctx,W,H,pct,col,state);     break;
+  }
 }
 
 // ── Render: Circle ────────────────────────────────────────────────────────────
@@ -2081,7 +2140,7 @@ function drawCircle(ctx, W, H, pct, col) {
   const r = Math.min(half - 26, (half - 4 - PULSE/2) / 1.065);
   if (r < 10) return;
   // Pulse ring thickness in final 10% for urgency
-  const urgencyPulse = pct < 0.1 ? Math.sin(performance.now()/120)*2 : 0;
+  const urgencyPulse = pct < 0.1 ? Math.sin(NOW()/120)*2 : 0;
   const lw = Math.max(10, r*0.13) + urgencyPulse;
 
   // Track ring
@@ -2152,7 +2211,7 @@ function drawBlocks(ctx, W, H, pct, col) {
       rrect(ctx,bx,by,cell,cell,rc); ctx.fillStyle=col; ctx.fill();
     } else if (elapsed < i+1) {
       // Currently draining — liquid surface ripples as level drops
-      const t = performance.now()/1000;
+      const t = NOW()/1000;
       const fillH = cell * (1-(elapsed-i));
       const surfY = by + cell - fillH;
       // Urgency: wave gets faster + bigger in final 10%
@@ -2204,7 +2263,7 @@ function drawDots(ctx, W, H, pct, col) {
       ctx.fillStyle=col; ctx.fill();
     } else if (elapsed < i+1) {
       // Draining — wavy liquid surface inside the circle
-      const t = performance.now()/1000;
+      const t = NOW()/1000;
       const fillH = diam * (1-(elapsed-i));
       const surfY = dcy + r - fillH;
       const urgency = pct < 0.1 ? 2.5 : 1;
@@ -2274,7 +2333,7 @@ function drawLiquid(ctx, W, H, pct, col, state) {
   const x0 = cx - cw/2, y0 = 10, pad = 9;
   const ix = x0+pad, iw = cw-pad*2, iy = y0+pad, ih = ch-pad*2;
   const elapsed = 1 - pct;
-  const now = performance.now();
+  const now = NOW();
 
   state.drops = state.drops || [];
 
@@ -2328,7 +2387,13 @@ function drawLiquid(ctx, W, H, pct, col, state) {
   // Constant rate while running so the motion stays lively the whole time;
   // the pools carry the "how much is left" signal.
   const spawnGap = 170;
-  if (running && pct > 0.01 && pct < 0.995 &&
+  // Gate on SECONDS, not on a fraction of the duration. This used to be
+  // `pct < 0.995`, which scales with the timer: on a 10-minute timer nothing
+  // dripped for the first 3 seconds (and it took ~8 for the cascade to look
+  // alive), and on a 30-minute timer, 9. The matching `pct > 0.01` also stopped
+  // the drops a full 6 seconds before zero. In seconds it behaves the same at
+  // every duration — start immediately, run until just before the end.
+  if (running && pct * totalSeconds > 1.2 &&
       now - state.lastSpawn > spawnGap && state.drops.length < 44) {
     state.lastSpawn = now;
     const r = 6 + Math.random() * 6;
@@ -2584,7 +2649,7 @@ function drawSaucer(ctx, cx, cy, w, col, phase, scale) {
 
 function drawUFOTimer(ctx, W, H, pct, col, state) {
   if (W < 80 || H < 80) return;
-  const now     = performance.now();
+  const now     = NOW();
   const elapsed = 1 - pct;
   const ot      = outroT();                       // 0 unless the finale is playing
   const groundY = H - Math.max(16, H * 0.12);
@@ -2879,7 +2944,7 @@ function drawDog(ctx, x, y, w, h, step) {
 
 function drawSheep(ctx, W, H, pct, col, state) {
   if (W < 120 || H < 110) return;
-  const now = performance.now();
+  const now = NOW();
   const elapsed = 1 - pct;
   const ot = outroT();
 
@@ -3135,7 +3200,7 @@ function drawSheep(ctx, W, H, pct, col, state) {
 // same split used for the saucer in Cow Abduction. Flat fills throughout.
 function drawCandle(ctx, W, H, pct, col, state) {
   if (W < 60 || H < 90) return;
-  const now = performance.now();
+  const now = NOW();
   const ot  = outroT();                 // >0 while the finale plays
   const cx  = W / 2;
   const PAD = Math.max(10, H * 0.045);
@@ -3380,7 +3445,9 @@ function drawHourglass(ctx, W, H, pct, col, state) {
   }
 
   // ── Sand stream through the neck ─────────────────────────────────────────
-  if (running && pct > 0.012 && pct < 0.99) {
+  // Seconds, not a fraction of the duration — see the note in drawLiquid. At
+  // 10 minutes this held the sand stream back for 6 seconds and cut it 7 short.
+  if (running && pct * totalSeconds > 0.8) {
     const streamEnd = elapsed > 0.003 ? y_pile - dome_rise : bot - 4;
     // Solid continuous stream — no dash
     ctx.beginPath();
@@ -3394,8 +3461,8 @@ function drawHourglass(ctx, W, H, pct, col, state) {
   }
 
   // ── Falling sand grains ───────────────────────────────────────────────────
-  const now = performance.now();
-  if (running && pct > 0.012 && pct < 0.995) {
+  const now = NOW();
+  if (running && pct * totalSeconds > 0.8) {
     if (now - state.lastSpawn > 55) {
       state.lastSpawn = now;
       for (let i = 0; i < 3; i++) {
@@ -3492,7 +3559,7 @@ let   outroStart  = 0;               // timestamp the outro began, 0 when idle
 // 0 → 1 across the outro; 0 when no outro is playing.
 function outroT() {
   if (!outroStart) return 0;
-  return Math.min(1, (performance.now() - outroStart) / OUTRO_MS);
+  return Math.min(1, (NOW() - outroStart) / OUTRO_MS);
 }
 
 function finishTimer() {
@@ -3672,7 +3739,7 @@ startBtn.addEventListener('click', () => {
     setInputsDisabled(false);
   } else {
     doneBanner.style.display = 'none'; outroStart = 0;
-    startStamp = performance.now(); running = true;
+    startStamp = NOW(); running = true;
     setInputsDisabled(true);
     startBtn.textContent = '⏸ Pause';
   }
